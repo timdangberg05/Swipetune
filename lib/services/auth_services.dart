@@ -89,6 +89,7 @@ void main() async {
   print('║   Spotify OAuth PKCE Login Flow       ║');
   print('╚════════════════════════════════════════╝\n');
   
+
   final auth = AuthServices(
     clientId: 'deb60e6c420e48b789b7a205a25df95e',  
     redirectUri: 'http://127.0.0.1:8080/callback',
@@ -136,7 +137,6 @@ void main() async {
   
   try {
     await auth.exchangeAuthCodes(code);
-    
 
     print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('✅ Login erfolgreich!');

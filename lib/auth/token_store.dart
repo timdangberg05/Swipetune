@@ -25,17 +25,3 @@
   }
   
  }
-
- void main() async {
-  final store = TokenStore();
-  
-  await store.saveAccessToken('test_access_123');
-  await store.saveRefreshToken('test_refresh_456');
-  
-  print('Access Token: ${await store.getAccessToken()}');
-  print('Refresh Token: ${await store.getRefreshToken()}');
-  
-  await store.clearTokens();
-  print('Nach Clear - Access: ${await store.getAccessToken()}');
-  print('Nach Clear - Refresh: ${await store.getRefreshToken()}');
-}
