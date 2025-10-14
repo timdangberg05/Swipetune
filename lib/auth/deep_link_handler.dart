@@ -23,7 +23,7 @@ class DeepLinkHandler {
 
     _linkSubscription = _applinks.uriLinkStream.listen((uri)
     {
-      if(uri != null && _codeCompleter.isCompleted)
+      if(uri != null && !_codeCompleter.isCompleted)
       {
         final code = extractCode(uri);
         if(code != null)
@@ -45,7 +45,7 @@ class DeepLinkHandler {
 
   String? extractCode(Uri uri) 
   {
-    if(uri.scheme == 'SwipeTune' &&  uri.host =='callback')
+    if(uri.scheme == 'Swipetune' &&  uri.host =='callback')
     {
       final code = uri.queryParameters['code'];
       final error = uri.queryParameters['error'];
