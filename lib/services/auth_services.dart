@@ -89,9 +89,8 @@ void main() async {
   print('║   Spotify OAuth PKCE Login Flow       ║');
   print('╚════════════════════════════════════════╝\n');
   
-  // AuthService erstellen
   final auth = AuthServices(
-    clientId: 'deb60e6c420e48b789b7a205a25df95e',  // ← Ersetze mit deiner echten Client ID!
+    clientId: 'deb60e6c420e48b789b7a205a25df95e',  
     redirectUri: 'http://127.0.0.1:8080/callback',
     scopes: [
       'user-read-email',
@@ -101,7 +100,7 @@ void main() async {
     ],
   );
   
-  // Schritt 1: URL generieren
+
   print('📋 Schritt 1: Authorize-URL generieren...\n');
   final url = auth.getAuthorizeUrl();
   
@@ -122,7 +121,7 @@ void main() async {
   print('http://127.0.0.1:8080/callback?code=AQBgUh...\n');
   print('                                     ^^^^^^^^ Das brauchst du!\n');
   
-  // Schritt 2: Auf Code warten
+
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   stdout.write('Füge den Code hier ein: ');
   final code = stdin.readLineSync()?.trim();
@@ -132,13 +131,13 @@ void main() async {
     return;
   }
   
-  // Schritt 3: Token Exchange
+
   print('\n🔄 Schritt 2: Code gegen Token tauschen...\n');
   
   try {
     await auth.exchangeAuthCodes(code);
     
-    // Schritt 4: Tokens abrufen und anzeigen
+
     print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('✅ Login erfolgreich!');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
