@@ -7,6 +7,8 @@ void main() {
 }
 
 class SwipeTuneApp extends StatelessWidget {
+  const SwipeTuneApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,6 +24,8 @@ class SwipeTuneApp extends StatelessWidget {
 }
 
 class SwipeHomePage extends StatefulWidget {
+  const SwipeHomePage({super.key});
+
   @override
   _SwipeHomePageState createState() => _SwipeHomePageState();
 }
