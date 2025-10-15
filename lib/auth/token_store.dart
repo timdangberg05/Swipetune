@@ -31,7 +31,6 @@ class TokenStore {
   Future<String?> getRefreshToken( ) async 
   {
     return await _storage.read(key: _keyRefreshToken);
-   
   }
 
   Future<DateTime?> getExpiresAt() async 
@@ -42,7 +41,6 @@ class TokenStore {
       return DateTime.parse(expiresAt);
     }
     return null;
-
   }
   Future<void> clearTokens( ) async {
     await _storage.delete(key: _keyAccessToken);
@@ -56,7 +54,6 @@ class TokenStore {
     if(expiresAt == null) return false;
     final isvalid = DateTime.now().isBefore(expiresAt);
     return isvalid;
-
   }
 
   Future<bool> hasValidTokens() async

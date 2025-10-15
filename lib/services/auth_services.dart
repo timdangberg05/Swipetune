@@ -4,6 +4,7 @@ import 'package:swipetune/auth/token_store.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
+import '../auth/deep_link_handler.dart';
 
 class AuthServices {
 
@@ -72,9 +73,14 @@ class AuthServices {
         final data = json.decode(response.body);
         final accessToken = data['access_token'];
         final refreshToken = data['refresh_token'];
+        final expiresIn = data['expires_in'] as int;
+
+        final expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
+
 
         await _tokenStore.saveAccessToken(accessToken);
         await _tokenStore.saveRefreshToken(refreshToken);
+        await _tokenStore.saveExpiresAt(expiresAt);
 
         print('Login erfolgreich');
         break;
@@ -88,6 +94,23 @@ class AuthServices {
       default: 
         print('unbekannter Fehler');
       break;
+    }
+  }
+
+  Future<void> login() async
+  {
+    final _dpl = DeepLinkHandler();
+
+    try
+    {
+      openAuthorizeUrl();
+      final code = await _dpl.waitForAuthorizationCode();
+
+      await exchangeAuthCodes(code);
+    }
+    finally
+    {
+      _dpl.dispose();
     }
   }
 

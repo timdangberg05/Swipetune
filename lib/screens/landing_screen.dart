@@ -5,6 +5,7 @@ import 'package:swipetune/screens/onboarding_screen.dart';
 import 'package:swipetune/widgets/intro_animation.dart';
 import 'package:swipetune/widgets/liquid_background.dart';
 import 'package:swipetune/widgets/logo_choreographer.dart';
+import '../services/auth_services.dart';
 
 enum AppState { welcome, login, signup, onboarding, home }
 
@@ -24,6 +25,8 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
   late AnimationController _homeController;
 
   AppState _appState = AppState.welcome;
+
+  late final AuthServices _authService;
   
   final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
 
@@ -37,6 +40,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _authPageController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _backgroundMorphController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _homeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _authService = AuthServices(clientId: 'deb60e6c420e48b789b7a205a25df95e', redirectUri: 'swipetune://callback', scopes: ['user-read-email','playlist-modify','playlist-modify-private','user-top-read']);
 
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
@@ -74,7 +78,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     });
   }
 
-  void _toggleSpotifyFlow(bool isActive) {
+  void _toggleSpotifyFlow(bool isActive) async {
     final size = MediaQuery.of(context).size;
     final finalLogoYPosition = size.height * 0.35;
     final finalLogoXPosition = (size.width / 2) + 60; 
@@ -83,6 +87,23 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
       _spotifyLogoCenterNotifier.value = Offset(finalLogoXPosition, finalLogoYPosition + 30);
       _colorTransitionController.forward(from: 0.0);
       _spotifyAuthController.forward(from: 0.0);
+
+      try
+      {
+        await _authService.login();
+        await Future.delayed(Duration(microseconds: 500));
+        if(mounted)
+        {
+          _setAppState(AppState.home);
+        }
+      }
+      catch(e)
+      {
+        if(mounted)
+        {
+          _toggleSpotifyFlow(false);
+        }
+      }
     } else {
       _spotifyLogoCenterNotifier.value = null;
       _colorTransitionController.reverse(from: 1.0);
