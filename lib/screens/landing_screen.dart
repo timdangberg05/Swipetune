@@ -69,7 +69,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
         _authPageController.forward();
       } else if (newState == AppState.onboarding) {
         _authPageController.reverse();
-      } else if (newState == AppState.home) {
+      } else if (newState == AppState.welcome) {
         _homeController.forward();
       }
       else {
@@ -91,7 +91,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
       try
       {
         await _authService.login();
-        await Future.delayed(Duration(microseconds: 500));
+        await Future.delayed(Duration(milliseconds: 500));
         if(mounted)
         {
           _setAppState(AppState.home);

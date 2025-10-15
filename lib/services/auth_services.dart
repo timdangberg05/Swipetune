@@ -108,91 +108,17 @@ class AuthServices {
 
       await exchangeAuthCodes(code);
     }
+    catch (e) 
+    {
+    print('❌ [AuthService] Login fehlgeschlagen: $e\n');
+    rethrow;  // ✅ Exception weitergeben an UI!
+    }
     finally
     {
       _dpl.dispose();
     }
   }
 
-}
-void main() async {
-  print('╔════════════════════════════════════════╗');
-  print('║   Spotify OAuth PKCE Login Flow       ║');
-  print('╚════════════════════════════════════════╝\n');
-  
-
-  final auth = AuthServices(
-    clientId: 'deb60e6c420e48b789b7a205a25df95e',  
-    redirectUri: 'http://127.0.0.1:8080/callback',
-    scopes: [
-      'user-read-email',
-      'playlist-modify-public',
-      'playlist-modify-private',
-      'user-top-read',
-    ],
-  );
-  
-
-  print('📋 Schritt 1: Authorize-URL generieren...\n');
-  /* final url = auth.getAuthorizeUrl(); */
-  auth.openAuthorizeUrl();
-  print('✅ URL generiert!\n');
-  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  print('Öffne diese URL im Browser:');
-  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  /* print(url); */
-  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-  
-  print('📝 Anleitung:');
-  print('1. Öffne die URL oben im Browser');
-  print('2. Logge dich bei Spotify ein');
-  print('3. Bestätige die Berechtigungen');
-  print('4. Kopiere den "code" Parameter aus der Redirect-URL\n');
-  
-  print('Beispiel Redirect-URL:');
-  print('http://127.0.0.1:8080/callback?code=AQBgUh...\n');
-  print('                                     ^^^^^^^^ Das brauchst du!\n');
-  
-
-  print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  stdout.write('Füge den Code hier ein: ');
-  final code = stdin.readLineSync()?.trim();
-  
-  if (code == null || code.isEmpty) {
-    print('❌ Kein Code eingegeben. Programm beendet.');
-    return;
-  }
-  
-
-  print('\n🔄 Schritt 2: Code gegen Token tauschen...\n');
-  
-  try {
-    await auth.exchangeAuthCodes(code);
-
-    print('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('✅ Login erfolgreich!');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    
-    final accessToken = await auth._tokenStore.getAccessToken();
-    final refreshToken = await auth._tokenStore.getRefreshToken();
-    
-    print('📦 Gespeicherte Tokens:');
-    print('   Access Token:  ${accessToken?.substring(0, 30)}...');
-    print('   Refresh Token: ${refreshToken?.substring(0, 30)}...\n');
-    
-    print('🎉 OAuth Flow erfolgreich abgeschlossen!');
-    print('💾 Tokens sind im TokenStore gespeichert.');
-    
-  } catch (e) {
-    print('\n❌ Fehler beim Token-Exchange:');
-    print('   $e\n');
-    print('💡 Mögliche Ursachen:');
-    print('   - Code ist abgelaufen (max. 10 Minuten gültig)');
-    print('   - Code wurde bereits verwendet');
-    print('   - Client ID stimmt nicht überein');
-    print('   - Redirect URI stimmt nicht überein\n');
-    print('🔄 Starte das Programm neu und versuche es erneut.');
-  }
 }
 
 
