@@ -5,6 +5,7 @@ import 'package:swipetune/screens/onboarding_screen.dart';
 import 'package:swipetune/widgets/intro_animation.dart';
 import 'package:swipetune/widgets/liquid_background.dart';
 import 'package:swipetune/widgets/logo_choreographer.dart';
+import '../services/auth_services.dart';
 
 enum AppState { welcome, login, signup, onboarding, home }
 
@@ -65,7 +66,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
         _authPageController.forward();
       } else if (newState == AppState.onboarding) {
         _authPageController.reverse();
-      } else if (newState == AppState.home) {
+      } else if (newState == AppState.welcome) {
         _homeController.forward();
       }
       else {
@@ -74,7 +75,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     });
   }
 
-  void _toggleSpotifyFlow(bool isActive) {
+  void _toggleSpotifyFlow(bool isActive) async {
     final size = MediaQuery.of(context).size;
     final finalLogoYPosition = size.height * 0.35;
     final finalLogoXPosition = (size.width / 2) + 60; 
@@ -83,6 +84,23 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
       _spotifyLogoCenterNotifier.value = Offset(finalLogoXPosition, finalLogoYPosition + 30);
       _colorTransitionController.forward(from: 0.0);
       _spotifyAuthController.forward(from: 0.0);
+
+      try
+      {
+        await AuthServices.login();
+        await Future.delayed(Duration(microseconds: 500));
+        if(mounted)
+        {
+          _setAppState(AppState.home);
+        }
+      }
+      catch(e)
+      {
+        if(mounted)
+        {
+          _toggleSpotifyFlow(false);
+        }
+      }
     } else {
       _spotifyLogoCenterNotifier.value = null;
       _colorTransitionController.reverse(from: 1.0);

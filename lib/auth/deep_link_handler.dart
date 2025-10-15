@@ -1,0 +1,56 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
+
+class DeepLinkHandler {
+  
+  final _applinks = AppLinks();
+  final _codeCompleter = Completer<String>();
+  StreamSubscription? _linkSubscription;
+
+  Future<String> waitForAuthorizationCode() async {
+    final initial = await _applinks.getInitialLink();
+    if (initial != null) {
+      final code = extractCode(initial);
+      if (code != null) {
+        return code;
+      }
+    }
+
+    _linkSubscription = _applinks.uriLinkStream.listen((uri) {
+      if (!_codeCompleter.isCompleted) {
+        final code = extractCode(uri);
+        if (code != null) {
+          _codeCompleter.complete(code);
+        }
+      }
+    });
+
+    return _codeCompleter.future.timeout(
+      Duration(minutes: 5),
+      onTimeout: () {
+        throw TimeoutException('Timeout after 5 minutes');
+      },
+    );
+  }
+
+  String? extractCode(Uri uri) {
+    if (uri.scheme == 'swipetune' && uri.host == 'callback') {
+      final code = uri.queryParameters['code'];
+      final error = uri.queryParameters['error'];
+
+      if (error != null) {
+        throw Exception('Spotify Error: $error');
+      }
+
+      if (code != null) {
+        return code;
+      }
+    }
+    
+    return null;
+  }
+
+  void dispose() {
+    _linkSubscription?.cancel();
+  }
+}

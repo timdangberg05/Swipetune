@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/auth_services.dart';
 
 // Der bestehende ActionButton
 class ActionButton extends StatefulWidget {
@@ -74,6 +75,7 @@ class SpotifyButton extends StatefulWidget {
 }
 
 class _SpotifyButtonState extends State<SpotifyButton> {
+
   bool _isPressed = false;
 
   @override
@@ -81,7 +83,9 @@ class _SpotifyButtonState extends State<SpotifyButton> {
     const spotifyColor = Color(0xFF1DB954);
 
     return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapDown: (_){
+        setState(() => _isPressed = true);
+      },
       onTapUp: (_) {
         setState(() => _isPressed = false);
         HapticFeedback.lightImpact();
