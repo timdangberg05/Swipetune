@@ -4,6 +4,7 @@ import '/homepage_widgets/song_card.dart';
 import '/homepage_widgets/stacked_card.dart';
 import '/homepage_widgets/player_bar.dart';
 import '/homepage_widgets/empty_state.dart';
+import '/widgets/liquid_background.dart'; // 🧩 dein LiquidGlassBackground importieren
 
 class SwipeHomePage extends StatefulWidget {
   const SwipeHomePage({super.key});
@@ -12,7 +13,8 @@ class SwipeHomePage extends StatefulWidget {
   _SwipeHomePageState createState() => _SwipeHomePageState();
 }
 
-class _SwipeHomePageState extends State<SwipeHomePage> {
+class _SwipeHomePageState extends State<SwipeHomePage>
+    with TickerProviderStateMixin {
   final List<Song> _songs = [
     Song(
       title: "Levitating",
@@ -52,17 +54,58 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
   bool _isPlaying = false;
   double _swipeOffset = 0.0;
 
+  // 🔥 Animationen für Liquid Background
+  late final AnimationController _timeController;
+  late final AnimationController _colorController;
+  late final AnimationController _morphController;
+  late final ValueNotifier<Offset?> _logoCenterNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _timeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+
+    _colorController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
+
+    _morphController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
+
+    _logoCenterNotifier = ValueNotifier(null);
+  }
+
+  @override
+  void dispose() {
+    _timeController.dispose();
+    _colorController.dispose();
+    _morphController.dispose();
+    _logoCenterNotifier.dispose();
+    super.dispose();
+  }
+
   Song? get _currentSong =>
       _currentIndex < _songs.length ? _songs[_currentIndex] : null;
 
   void _nextSong({bool liked = true}) {
     if (_currentSong == null) return;
     setState(() {
-      if (liked) _liked.add(_songs[_currentIndex]);
-      else _disliked.add(_songs[_currentIndex]);
+      if (liked)
+        _liked.add(_songs[_currentIndex]);
+      else
+        _disliked.add(_songs[_currentIndex]);
 
-      if (_currentIndex < _songs.length - 1) _currentIndex++;
-      else _currentIndex = 0;
+      if (_currentIndex < _songs.length - 1)
+        _currentIndex++;
+      else
+        _currentIndex = 0;
 
       _swipeOffset = 0;
     });
@@ -78,14 +121,36 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_timeController == null ||
+    _colorController == null ||
+    _morphController == null ||
+    _logoCenterNotifier == null) {
+  return const SizedBox.shrink();
+}
+
     final song = _currentSong;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
-            // Counter oben rechts
+            // 🌊 LiquidGlassBackground einfügen
+            Positioned.fill(
+              child: LiquidGlassBackground(
+                time: _timeController,
+                colorTransitionValue: _colorController,
+                spotifyLogoCenterNotifier: _logoCenterNotifier,
+                backgroundMorphController: _morphController,
+              ),
+            ),
+
+            // 🌑 Optional: leichtes Overlay für Lesbarkeit
+            Container(color: Colors.black.withOpacity(0.25)),
+
+            // ❤️ Zähler oben rechts
             Positioned(
               top: 16,
               right: 16,
@@ -93,7 +158,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.white24,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -104,22 +169,30 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
               ),
             ),
 
-            // Gestapelte Song-Karten
+            // 🎵 Song-Karten
             if (song != null)
               Center(
                 child: GestureDetector(
+                  onTapDown: (details) {
+                    // Interaktion mit Hintergrund
+                    _logoCenterNotifier.value = details.globalPosition;
+                  },
+                  onTapUp: (_) => _logoCenterNotifier.value = null,
                   onHorizontalDragUpdate: (details) {
                     setState(() => _swipeOffset += details.delta.dx);
                   },
                   onHorizontalDragEnd: (details) {
-                    final width = MediaQuery.of(context).size.width;
-                    if (_swipeOffset > width * 0.25) _nextSong(liked: true);
-                    else if (_swipeOffset < -width * 0.25) _nextSong(liked: false);
-                    else setState(() => _swipeOffset = 0);
+                    if (_swipeOffset > screenWidth * 0.25)
+                      _nextSong(liked: true);
+                    else if (_swipeOffset < -screenWidth * 0.25)
+                      _nextSong(liked: false);
+                    else
+                      setState(() => _swipeOffset = 0);
                   },
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
+                      // Hintergrundkarten (gestapelt)
                       for (int i = 4; i >= 1; i--)
                         if (_currentIndex + i < _songs.length)
                           StackedCardUpwards(
@@ -127,6 +200,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
                             position: i.toDouble(),
                           ),
 
+                      // Aktuelle Karte mit Swipe-Animation
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 400),
                         transitionBuilder: (child, animation) =>
@@ -134,10 +208,40 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
                         child: Transform.translate(
                           key: ValueKey(song.title),
                           offset: Offset(_swipeOffset, 0),
-                          child: SizedBox(
-                            width: MediaQuery.of(context).size.width * 0.85,
-                            height: MediaQuery.of(context).size.height * 0.55,
-                            child: SongCard(song: song),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: screenWidth * 0.85,
+                                height: screenHeight * 0.55,
+                                child: SongCard(song: song),
+                              ),
+                              // Herz/Kreuz beim Swipen
+                              if (_swipeOffset.abs() > 10)
+                                Positioned(
+                                  top: 40,
+                                  left: _swipeOffset > 0 ? 20 : null,
+                                  right: _swipeOffset < 0 ? 20 : null,
+                                  child: Transform.rotate(
+                                    angle: _swipeOffset / 300,
+                                    child: Opacity(
+                                      opacity: (_swipeOffset.abs() / 150)
+                                          .clamp(0.0, 1.0),
+                                      child: Icon(
+                                        _swipeOffset > 0
+                                            ? Icons.favorite
+                                            : Icons.close,
+                                        color: _swipeOffset > 0
+                                            ? Colors.greenAccent
+                                            : Colors.redAccent,
+                                        size: 100 *
+                                            (_swipeOffset.abs() / 150)
+                                                .clamp(0.7, 1.0),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -148,17 +252,17 @@ class _SwipeHomePageState extends State<SwipeHomePage> {
             else
               EmptyState(onReload: _reloadSongs),
 
-            // PlayerBar immer am unteren Rand
+            // 🎧 Player unten
             Align(
               alignment: Alignment.bottomCenter,
               child: song != null
-              ?
-                PlayerBar(
-                  song: song,
-                  isPlaying: _isPlaying,
-                  onPlayPause: () => setState(() => _isPlaying = !_isPlaying),
-                )
-                : Container(height: 80),
+                  ? PlayerBar(
+                      song: song,
+                      isPlaying: _isPlaying,
+                      onPlayPause: () =>
+                          setState(() => _isPlaying = !_isPlaying),
+                    )
+                  : const SizedBox(height: 80),
             ),
           ],
         ),
