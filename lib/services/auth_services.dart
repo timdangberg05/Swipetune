@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:swipetune/auth/pkce_generator.dart';
 import 'package:swipetune/auth/token_store.dart';
 import 'package:http/http.dart' as http;
@@ -93,6 +94,74 @@ class AuthServices {
         print('unbekannter Fehler');
       break;
     }
+  }
+
+  static Future<void> refreshAccessToken() async
+  {
+    final refreshToken = await _tokenStore.getRefreshToken();
+    if(refreshToken == null)
+    {
+        throw Exception("Kein RefreshToken -- User muss sich neu einloggen");
+    }
+    final response = await http.post
+    (
+      Uri.parse('https://accounts.spotify.com/api/token'),
+      headers: 
+      {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+        'client_id': clientId,
+      },
+    );
+
+    switch(response.statusCode)
+    {
+      case 200:
+        final data = json.decode(response.body);
+        final accessToken = data['access_token'];
+        final newrefreshToken = data['refresh_token'];
+        final expiresIn = data['expires_in'] as int;
+
+        final expiresAt = DateTime.now().add(Duration(seconds: expiresIn));
+
+
+        await _tokenStore.saveAccessToken(accessToken);
+        newrefreshToken != null ? await _tokenStore.saveRefreshToken(refreshToken): null;
+        await _tokenStore.saveExpiresAt(expiresAt);
+
+        print('token korrekt refreshed');
+        break;
+
+      case 400:
+        print('Ungültiger Request');
+        break;
+      case 401:
+        print('FreshToken ungültig');
+      break;
+      default: 
+        print('unbekannter Fehler');
+      break;
+    }
+  }
+
+  static Future<String> getValidAccessToken() async
+  {
+    final isValid = await _tokenStore.isTokenValid();
+    if(!isValid)
+    {
+      await refreshAccessToken();
+    }
+    final token = await _tokenStore.getAccessToken();
+
+    if(token == null)
+    {
+      throw Exception('Kein Access Token vorhanden');
+    }
+
+    return token;
   }
 
   static Future<void> login() async
