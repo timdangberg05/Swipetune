@@ -40,7 +40,7 @@ class LogoChoreographer extends StatelessWidget {
     final homeLogoSize = Tween<double>(begin: 60.0, end: 30.0).animate(homeCurve);
 
     // X-Positionen
-    final swipetuneMoveX = Tween<double>(begin: 0, end: -75).animate(spotifyCurve);
+    final swipetuneMoveX = Tween<double>(begin: 0, end: -size.width * 0.18).animate(spotifyCurve); // -> spacing zwischen logos in connecting with spotify
     final homeMoveX = Tween<double>(begin: 0, end: -(size.width / 2) + 40).animate(homeCurve);
     
     // Fading
@@ -65,12 +65,13 @@ class LogoChoreographer extends StatelessWidget {
         final currentSize = homeController.value > 0 ? homeLogoSize.value : logoSize.value;
         final currentX = homeController.value > 0 ? homeMoveX.value : swipetuneMoveX.value;
 
-        // Bestimmt die Sichtbarkeit der Spotify-Elemente
+        // Sichtbarkeit der Spotify-Elemente
         final isSpotifyVisible = spotifyController.value > 0 && homeController.value == 0;
         
         return Stack(
           alignment: Alignment.center,
           children: [
+            // 1. Swipetune-Wellen-Logo (Standardposition)
             Positioned(
               top: currentY,
               child: Transform.translate(
@@ -78,27 +79,39 @@ class LogoChoreographer extends StatelessWidget {
                 child: Icon(Icons.waves_rounded, color: Colors.white, size: currentSize),
               ),
             ),
-             // Positioniert die Spotify-spezifischen Elemente separat
+
+            // 2. Spotify- und X-Logos – X immer genau in der Mitte
             if (isSpotifyVisible)
               Positioned(
                 top: spotifyY.value,
-                child: Row(
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    SizedBox(width: swipetuneMoveX.value.abs() * 2), 
+                    // Linkes Wellen-Icon (geht nach links)
+                    Transform.translate(
+                      offset: Offset(swipetuneMoveX.value, 0),
+                      child: const Icon(Icons.waves_rounded, color: Colors.white, size: 60),
+                    ),
+
+                    // X-Icon (immer zentriert)
                     FadeTransition(
                       opacity: xFade,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Icon(Icons.close_rounded, color: Colors.white.withOpacity(0.5), size: 30),
-                      ),
+                      child: const Icon(Icons.close_rounded, color: Colors.white54, size: 30),
                     ),
-                    FadeTransition(
-                      opacity: spotifyFade,
-                      child: const FaIcon(FontAwesomeIcons.spotify, color: Color(0xFF1DB945), size: 60),
+
+                    // Rechtes Spotify-Logo (geht nach rechts)
+                    Transform.translate(
+                      offset: Offset(-swipetuneMoveX.value, 0),
+                      child: FadeTransition(
+                        opacity: spotifyFade,
+                        child: const FaIcon(FontAwesomeIcons.spotify, color: Color(0xFF1DB945), size: 60),
+                      ),
                     ),
                   ],
                 ),
               ),
+
+            // 3. Login-Panel unten
             Positioned(
               top: size.height * 0.35 + 120,
               child: FadeTransition(
@@ -114,4 +127,3 @@ class LogoChoreographer extends StatelessWidget {
     );
   }
 }
-
