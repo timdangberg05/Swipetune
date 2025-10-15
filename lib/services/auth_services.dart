@@ -7,9 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../auth/deep_link_handler.dart';
 
 class AuthServices {
-
-  //_authService = AuthServices(clientId: 'deb60e6c420e48b789b7a205a25df95e', redirectUri: 'swipetune://callback', scopes: ['user-read-email','playlist-modify','playlist-modify-private','user-top-read']);
-
+  
   static final String clientId = 'deb60e6c420e48b789b7a205a25df95e';
   static final String redirectUri = 'swipetune://callback';
   static final List<String> scopes = ['user-read-email','playlist-modify','playlist-modify-private','user-top-read'];

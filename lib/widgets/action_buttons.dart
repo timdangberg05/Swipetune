@@ -76,20 +76,6 @@ class SpotifyButton extends StatefulWidget {
 
 class _SpotifyButtonState extends State<SpotifyButton> {
 
-
-  // Keine finale Implementation (Testzweck), wird u.U. noch angepasst
-  // ==============================================
-  // final auth = AuthServices(
-  //   clientId: 'deb60e6c420e48b789b7a205a25df95e',  
-  //   redirectUri: 'http://127.0.0.1:8080/callback',
-  //   scopes: [
-  //     'user-read-email',
-  //     'playlist-modify-public',
-  //     'playlist-modify-private',
-  //     'user-top-read',
-  //   ],
-  // );
-  //==============================================
   bool _isPressed = false;
 
   @override
@@ -99,7 +85,6 @@ class _SpotifyButtonState extends State<SpotifyButton> {
     return GestureDetector(
       onTapDown: (_){
         setState(() => _isPressed = true);
-        // auth.openAuthorizeUrl();
       },
       onTapUp: (_) {
         setState(() => _isPressed = false);
