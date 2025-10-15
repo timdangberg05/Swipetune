@@ -1,6 +1,3 @@
- import 'dart:async';
-
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class TokenStore {
@@ -28,22 +25,13 @@ class TokenStore {
 
   Future<String?> getAccessToken( ) async 
   {
-    final keyAccessToken =  await _storage.read(key: _keyAccessToken);
-    if(keyAccessToken != null)
-    {
-      return keyAccessToken;
-    }
-    return null;
+    return await _storage.read(key: _keyAccessToken);
   }
 
   Future<String?> getRefreshToken( ) async 
   {
-    final keyRefreshToken =  await _storage.read(key: _keyRefreshToken);
-    if(keyRefreshToken != null)
-    {
-      return keyRefreshToken;
-    }
-    return null;
+    return await _storage.read(key: _keyRefreshToken);
+   
   }
 
   Future<DateTime?> getExpiresAt() async 
