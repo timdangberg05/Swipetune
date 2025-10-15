@@ -25,8 +25,6 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
   late AnimationController _homeController;
 
   AppState _appState = AppState.welcome;
-
-  late final AuthServices _authService;
   
   final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
 
@@ -40,7 +38,6 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _authPageController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _backgroundMorphController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _homeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _authService = AuthServices(clientId: 'deb60e6c420e48b789b7a205a25df95e', redirectUri: 'swipetune://callback', scopes: ['user-read-email','playlist-modify','playlist-modify-private','user-top-read']);
 
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
@@ -90,8 +87,8 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
 
       try
       {
-        await _authService.login();
-        await Future.delayed(Duration(milliseconds: 500));
+        await AuthServices.login();
+        await Future.delayed(Duration(microseconds: 500));
         if(mounted)
         {
           _setAppState(AppState.home);

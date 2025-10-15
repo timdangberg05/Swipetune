@@ -8,22 +8,20 @@ import '../auth/deep_link_handler.dart';
 
 class AuthServices {
 
-  final String clientId;
-  final String redirectUri;
-  final List<String> scopes;
-  
-  final PkceGenerator _pkce_gen = PkceGenerator();
-  final TokenStore _tokenStore = TokenStore();
-  
-  String? _codeVerifier;
+  //_authService = AuthServices(clientId: 'deb60e6c420e48b789b7a205a25df95e', redirectUri: 'swipetune://callback', scopes: ['user-read-email','playlist-modify','playlist-modify-private','user-top-read']);
 
-  AuthServices({
-    required this.clientId,
-    required this.redirectUri,
-    required this.scopes,
-  });
+  static final String clientId = 'deb60e6c420e48b789b7a205a25df95e';
+  static final String redirectUri = 'swipetune://callback';
+  static final List<String> scopes = ['user-read-email','playlist-modify','playlist-modify-private','user-top-read'];
+  
+  static final PkceGenerator _pkce_gen = PkceGenerator();
+  static final TokenStore _tokenStore = TokenStore();
+  
+  static String? _codeVerifier;
 
-  void openAuthorizeUrl()
+  AuthServices._();
+
+  static void openAuthorizeUrl()
   {
     _codeVerifier = _pkce_gen.generateCodeVerifier();
     var codechallenge = _pkce_gen.generateCodeChallenge(_codeVerifier!);
@@ -44,14 +42,14 @@ class AuthServices {
     _launchURL(uri);
   }
 
-  _launchURL(Uri uri) async{
+  static _launchURL(Uri uri) async{
     if(!await launchUrl(uri)){
       throw Exception("URL konnte nicht gestartet werden"); 
     }
   }
 
 
-  Future<void> exchangeAuthCodes(String code) async
+  static Future<void> exchangeAuthCodes(String code) async
   {
     final body = 
     {
@@ -97,7 +95,7 @@ class AuthServices {
     }
   }
 
-  Future<void> login() async
+  static Future<void> login() async
   {
     final _dpl = DeepLinkHandler();
 

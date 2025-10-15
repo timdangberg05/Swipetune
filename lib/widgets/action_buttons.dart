@@ -97,7 +97,6 @@ class _SpotifyButtonState extends State<SpotifyButton> {
     const spotifyColor = Color(0xFF1DB954);
 
     return GestureDetector(
-      /* onTapDown: (_) => setState(() => _isPressed = true), */
       onTapDown: (_){
         setState(() => _isPressed = true);
         // auth.openAuthorizeUrl();
