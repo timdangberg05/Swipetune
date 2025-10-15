@@ -1,9 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter_application_2/auth/pkce_generator.dart';
 import 'package:flutter_application_2/auth/token_store.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthServices {
 
@@ -22,66 +22,74 @@ class AuthServices {
     required this.scopes,
   });
 
-  String getAuthorizeUrl()
+  void openAuthorizeUrl()
   {
-      _codeVerifier = _pkce_gen.generateCodeVerifier();
-      var codechallenge = _pkce_gen.generateCodeChallenge(_codeVerifier!);
-      final scropeString = scopes.join(' ');
-      final uri = Uri.https(
-        'accounts.spotify.com',
-        '/authorize',
-        {
-          'client_id': clientId,
-          'response_type': 'code',
-          'redirect_uri': redirectUri,
-          'scope': scropeString,
-          'code_challenge_method': 'S256',
-          'code_challenge': codechallenge,
-        }
-      );
-      return uri.toString();
-    }
-
-    Future<void> exchangeAuthCodes(String code) async
-    {
-      final body = 
+    _codeVerifier = _pkce_gen.generateCodeVerifier();
+    var codechallenge = _pkce_gen.generateCodeChallenge(_codeVerifier!);
+    final scropeString = scopes.join(' ');
+    final uri = Uri.https(
+      'accounts.spotify.com',
+      '/authorize',
       {
-          'grant_type': 'authorization_code',
-          'code': code,
-          'redirect_uri': redirectUri,
-          'client_id': clientId,
-          'code_verifier': _codeVerifier!,
-      };
-      final response = await http.post
-      (
-        Uri.parse('https://accounts.spotify.com/api/token'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: body,
-      );
-      switch(response.statusCode)
-      {
-        case 200:
-          final data = json.decode(response.body);
-          final accessToken = data['access_token'];
-          final refreshToken = data['refresh_token'];
-
-          await _tokenStore.saveAccessToken(accessToken);
-          await _tokenStore.saveRefreshToken(refreshToken);
-
-          print('Login erfolgreich');
-          break;
-
-        case 400:
-          print('Ungültiger Request');
-          break;
-        case 401:
-          print('Unautorisierter reqeust');
-        break;
-        default: 
-          print('unbekannter Fehler');
-        break;
+        'client_id': clientId,
+        'response_type': 'code',
+        'redirect_uri': redirectUri,
+        'scope': scropeString,
+        'code_challenge_method': 'S256',
+        'code_challenge': codechallenge,
       }
+    );
+    /* return uri.toString(); */
+    _launchURL(uri);
+  }
+
+  _launchURL(Uri uri) async{
+    if(!await launchUrl(uri)){
+      throw Exception("URL konnte nicht gestartet werden"); 
     }
+  }
+
+
+  Future<void> exchangeAuthCodes(String code) async
+  {
+    final body = 
+    {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': redirectUri,
+        'client_id': clientId,
+        'code_verifier': _codeVerifier!,
+    };
+    final response = await http.post
+    (
+      Uri.parse('https://accounts.spotify.com/api/token'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: body,
+    );
+    switch(response.statusCode)
+    {
+      case 200:
+        final data = json.decode(response.body);
+        final accessToken = data['access_token'];
+        final refreshToken = data['refresh_token'];
+
+        await _tokenStore.saveAccessToken(accessToken);
+        await _tokenStore.saveRefreshToken(refreshToken);
+
+        print('Login erfolgreich');
+        break;
+
+      case 400:
+        print('Ungültiger Request');
+        break;
+      case 401:
+        print('Unautorisierter reqeust');
+      break;
+      default: 
+        print('unbekannter Fehler');
+      break;
+    }
+  }
 
 }
 void main() async {
@@ -103,13 +111,13 @@ void main() async {
   
 
   print('📋 Schritt 1: Authorize-URL generieren...\n');
-  final url = auth.getAuthorizeUrl();
-  
+  /* final url = auth.getAuthorizeUrl(); */
+  auth.openAuthorizeUrl();
   print('✅ URL generiert!\n');
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   print('Öffne diese URL im Browser:');
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  print(url);
+  /* print(url); */
   print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
   print('📝 Anleitung:');
