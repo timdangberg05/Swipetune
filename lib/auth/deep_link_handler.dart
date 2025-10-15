@@ -11,7 +11,7 @@ class DeepLinkHandler {
 
   Future<String> waitForAuthorizationCode()async
   {
-    final initial = await  _applinks.getInitialAppLink();
+    final initial = await  _applinks.getInitialLink();
     if(initial != null)
     {
       final code = extractCode(initial);

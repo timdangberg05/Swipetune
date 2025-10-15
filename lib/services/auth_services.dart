@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'package:flutter_application_2/auth/pkce_generator.dart';
-import 'package:flutter_application_2/auth/token_store.dart';
+import 'package:swipetune/auth/pkce_generator.dart';
+import 'package:swipetune/auth/token_store.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
