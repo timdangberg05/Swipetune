@@ -98,15 +98,17 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
       {
         if(mounted)
         {
-          _toggleSpotifyFlow(false);
-          _setAppState(AppState.welcome);
+          _resetSpotifyAnimation();
         }
       }
-    } else {
-      _spotifyLogoCenterNotifier.value = null;
+    } 
+  }
+
+  void _resetSpotifyAnimation()
+  {
+    _spotifyLogoCenterNotifier.value = null;
       _colorTransitionController.reverse(from: 1.0);
       _spotifyAuthController.reverse(from: 1.0);
-    }
   }
 
   @override
