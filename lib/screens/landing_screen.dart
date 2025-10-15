@@ -39,6 +39,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _authPageController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _backgroundMorphController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _homeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _checkExistingLogin();
 
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
@@ -58,6 +59,17 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _homeController.dispose();
     _spotifyLogoCenterNotifier.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkExistingLogin() async {
+
+  await Future.delayed(Duration(milliseconds: 1000));
+  final hasTokens = await AuthServices.tokenStore.hasValidTokens(); 
+  if (hasTokens) {
+    if (mounted) {
+      _setAppState(AppState.homepage);
+    }
+  }
   }
 
   void _setAppState(AppState newState) {

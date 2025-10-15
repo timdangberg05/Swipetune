@@ -7,13 +7,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../auth/deep_link_handler.dart';
 
 class AuthServices {
-  
+
   static final String clientId = 'deb60e6c420e48b789b7a205a25df95e';
   static final String redirectUri = 'swipetune://callback';
   static final List<String> scopes = ['user-read-email','playlist-modify','playlist-modify-private','user-top-read'];
   
   static final PkceGenerator _pkce_gen = PkceGenerator();
   static final TokenStore _tokenStore = TokenStore();
+
+  static TokenStore get tokenStore => _tokenStore;
   
   static String? _codeVerifier;
 
@@ -114,7 +116,6 @@ class AuthServices {
       _dpl.dispose();
     }
   }
-
 }
 
 
