@@ -23,7 +23,7 @@ class DeepLinkHandler {
 
     _linkSubscription = _applinks.uriLinkStream.listen((uri)
     {
-      if(uri != null && !_codeCompleter.isCompleted)
+      if(!_codeCompleter.isCompleted)
       {
         final code = extractCode(uri);
         if(code != null)
@@ -37,7 +37,7 @@ class DeepLinkHandler {
     return _codeCompleter.future.timeout
     (Duration(minutes : 5),
     onTimeout: () 
-    {throw new Exception('Timout after period');
+    {throw Exception('Timout after period');
     },
     );
     }
