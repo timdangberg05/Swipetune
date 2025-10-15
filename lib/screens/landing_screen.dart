@@ -6,8 +6,9 @@ import 'package:swipetune/widgets/intro_animation.dart';
 import 'package:swipetune/widgets/liquid_background.dart';
 import 'package:swipetune/widgets/logo_choreographer.dart';
 import '../services/auth_services.dart';
+import '../pages/homepage.dart';
 
-enum AppState { welcome, login, signup, onboarding, home }
+enum AppState { welcome, login, signup, onboarding, home, homepage }
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -60,21 +61,20 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
   }
 
   void _setAppState(AppState newState) {
-    setState(() {
-      _appState = newState;
-      if (newState == AppState.login || newState == AppState.signup) {
-        _authPageController.forward();
-      } else if (newState == AppState.onboarding) {
-        _authPageController.reverse();
-      } else if (newState == AppState.welcome) {
-        _homeController.forward();
-      }
-      else {
-        _authPageController.reverse();
-      }
-    });
-  }
-
+  setState(() {
+    _appState = newState;
+    
+    if (newState == AppState.login || newState == AppState.signup) {
+      _authPageController.forward();
+    } else if (newState == AppState.onboarding) {
+      _authPageController.reverse();
+    } else if (newState == AppState.homepage) {  
+      _homeController.forward();
+    } else if (newState == AppState.welcome) {
+      _authPageController.reverse();
+    }
+  });
+}
   void _toggleSpotifyFlow(bool isActive) async {
     final size = MediaQuery.of(context).size;
     final finalLogoYPosition = size.height * 0.35;
@@ -88,10 +88,10 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
       try
       {
         await AuthServices.login();
-        await Future.delayed(Duration(microseconds: 500));
+        await Future.delayed(Duration(milliseconds: 3000));
         if(mounted)
         {
-          _setAppState(AppState.home);
+          _setAppState(AppState.homepage);
         }
       }
       catch(e)
@@ -99,6 +99,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
         if(mounted)
         {
           _toggleSpotifyFlow(false);
+          _setAppState(AppState.welcome);
         }
       }
     } else {
@@ -166,10 +167,10 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
           backgroundMorphController: _backgroundMorphController,
           onComplete: () => _setAppState(AppState.home),
         );
-       case AppState.home:
+       case AppState.homepage:
         return FadeTransition(
           opacity: _homeController,
-          child: const HomePage(),
+          child: const SwipeHomePage(),
         );
       case AppState.welcome:
       default:
