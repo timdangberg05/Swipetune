@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:swipetune/widgets/empty_state.dart';
+import 'package:swipetune/widgets/player_bar.dart';
+import 'package:swipetune/widgets/song_card.dart';
+import 'package:swipetune/widgets/stacked_card.dart';
 import '/homepage_songs/song.dart';
-import '/homepage_widgets/song_card.dart';
-import '/homepage_widgets/stacked_card.dart';
-import '/homepage_widgets/player_bar.dart';
-import '/homepage_widgets/empty_state.dart';
 import '../API/SongService.dart';
 import '../API/SpotifyApiClient.dart';
 import '/widgets/liquid_background.dart'; // 🧩 dein LiquidGlassBackground importieren
@@ -17,38 +17,8 @@ class SwipeHomePage extends StatefulWidget {
 
 class _SwipeHomePageState extends State<SwipeHomePage>
     with TickerProviderStateMixin {
-  final List<Song> _songs = [
-    Song(
-      title: "Levitating",
-      artist: "Dua Lipa",
-      coverUrl:
-          "https://upload.wikimedia.org/wikipedia/en/f/f7/Dua_Lipa_-_Levitating.png",
-    ),
-    Song(
-      title: "Blinding Lights",
-      artist: "The Weeknd",
-      coverUrl:
-          "https://upload.wikimedia.org/wikipedia/en/e/e6/The_Weeknd_-_Blinding_Lights.png",
-    ),
-    Song(
-      title: "Shape of You",
-      artist: "Ed Sheeran",
-      coverUrl:
-          "https://upload.wikimedia.org/wikipedia/en/b/b4/Shape_Of_You_%28Official_Single_Cover%29_by_Ed_Sheeran.png",
-    ),
-    Song(
-      title: "Watermelon Sugar",
-      artist: "Harry Styles",
-      coverUrl:
-          "https://upload.wikimedia.org/wikipedia/en/1/1a/Harry_Styles_-_Watermelon_Sugar.png",
-    ),
-    Song(
-      title: "Dance Monkey",
-      artist: "Tones and I",
-      coverUrl:
-          "https://upload.wikimedia.org/wikipedia/en/4/4a/Tones_and_I_-_Dance_Monkey.png",
-    ),
-  ];
+  List<Song> _songs = [];
+  bool _isLoading = true;
 
   int _currentIndex = 0;
   final List<Song> _liked = [];
@@ -101,12 +71,22 @@ class _SwipeHomePageState extends State<SwipeHomePage>
     final tracks = await _songService.getTopTracks();
     print('✅ Tracks geladen: ${tracks.length}');
 
+    setState(() {
+      _songs = tracks.map((track) => Song
+      (
+        title: track.name,
+        artist: track.artist,
+        coverUrl: track.albumImageUrl ?? '',
+      )).toList();
+      _isLoading = false;
+    });
     for (var track in tracks)
     {
       print( '  ${track.name} - ${track.artist}');
     }
   } catch (e) {
     print(' Fehler: $e');
+    setState(() => _isLoading = false);
   }
 }
 
@@ -162,7 +142,22 @@ class _SwipeHomePageState extends State<SwipeHomePage>
             // 🌑 Dunkles Overlay für bessere Lesbarkeit
             Container(color: Colors.black.withOpacity(0.25)),
 
+          if (_isLoading)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Lade deine Top Tracks...',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
             // ❤️ Like / Dislike Counter
+            if(!_isLoading)
             Positioned(
               top: 16,
               right: 16,
@@ -182,7 +177,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
             ),
 
             // 🎵 Song-Karten + Swipe-Animation
-            if (song != null)
+            if (!_isLoading && song != null)
               Center(
                 child: GestureDetector(
                   onTapDown: (details) =>
@@ -303,10 +298,11 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                   ),
                 ),
               )
-            else
+            else if (!_isLoading && _songs.isEmpty)
               EmptyState(onReload: _reloadSongs),
 
             // 🎧 Player unten
+            if(!_isLoading)
             Align(
               alignment: Alignment.bottomCenter,
               child: song != null
