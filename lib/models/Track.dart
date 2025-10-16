@@ -9,6 +9,9 @@ class Track{
 
   Track({required this.id, required this.name, required this.artist, required this.albumImageUrl});
 
+
+
+
   Track.fromMap(Map<String, dynamic> map)
     : id = map['id'],
       name = map['name'],
