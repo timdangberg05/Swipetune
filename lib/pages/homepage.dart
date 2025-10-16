@@ -4,6 +4,8 @@ import '/homepage_widgets/song_card.dart';
 import '/homepage_widgets/stacked_card.dart';
 import '/homepage_widgets/player_bar.dart';
 import '/homepage_widgets/empty_state.dart';
+import '../API/SongService.dart';
+import '../API/SpotifyApiClient.dart';
 import '/widgets/liquid_background.dart'; // 🧩 dein LiquidGlassBackground importieren
 
 class SwipeHomePage extends StatefulWidget {
@@ -59,6 +61,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
   late final AnimationController _colorController;
   late final AnimationController _morphController;
   late final ValueNotifier<Offset?> _logoCenterNotifier;
+  late final SongService _songService;
 
   @override
   void initState() {
@@ -80,6 +83,8 @@ class _SwipeHomePageState extends State<SwipeHomePage>
     )..repeat(reverse: true);
 
     _logoCenterNotifier = ValueNotifier(null);
+    _songService = SongService(SpotifyApiClient());
+    _loadRealSongs();
   }
 
   @override
@@ -90,6 +95,20 @@ class _SwipeHomePageState extends State<SwipeHomePage>
     _logoCenterNotifier.dispose();
     super.dispose();
   }
+
+  Future<void> _loadRealSongs() async {
+  try {
+    final tracks = await _songService.getTopTracks();
+    print('✅ Tracks geladen: ${tracks.length}');
+
+    for (var track in tracks)
+    {
+      print( '  ${track.name} - ${track.artist}');
+    }
+  } catch (e) {
+    print(' Fehler: $e');
+  }
+}
 
   Song? get _currentSong =>
       _currentIndex < _songs.length ? _songs[_currentIndex] : null;

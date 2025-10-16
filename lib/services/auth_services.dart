@@ -11,7 +11,7 @@ class AuthServices {
 
   static final String clientId = 'deb60e6c420e48b789b7a205a25df95e';
   static final String redirectUri = 'swipetune://callback';
-  static final List<String> scopes = ['user-read-email','playlist-modify','playlist-modify-private','user-top-read'];
+  static final List<String> scopes = ['user-read-email','playlist-modify-public','playlist-modify-private','user-top-read'];
   
   static final PkceGenerator _pkce_gen = PkceGenerator();
   static final TokenStore _tokenStore = TokenStore();
@@ -129,21 +129,25 @@ class AuthServices {
 
 
         await _tokenStore.saveAccessToken(accessToken);
-        newrefreshToken != null ? await _tokenStore.saveRefreshToken(refreshToken): null;
         await _tokenStore.saveExpiresAt(expiresAt);
+        if (newrefreshToken != null) 
+        {
+        await _tokenStore.saveRefreshToken(newrefreshToken);
+        }
+
 
         print('token korrekt refreshed');
         break;
 
       case 400:
         print('Ungültiger Request');
-        break;
+        throw Exception('Token Refresh fehlgeschlagen: Bad Request');
       case 401:
         print('FreshToken ungültig');
-      break;
+        throw Exception('Token Refresh fehlgeschlagen: Unauthorized');
       default: 
         print('unbekannter Fehler');
-      break;
+        throw Exception('Token Refresh fehlgeschlagen: ${response.statusCode}');
     }
   }
 

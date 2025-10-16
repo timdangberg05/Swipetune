@@ -11,10 +11,7 @@ class SpotifyApiClient{
 
   Future<Map<String, dynamic>> get(String endpoint) async{
 
-    if(!await _tokenstore.isTokenValid()){
-      AuthServices.refreshAccessToken();
-    }
-    final accessToken = _tokenstore.getAccessToken();
+    final accessToken = await AuthServices.getValidAccessToken();
 
     final url = Uri.parse(_baseUrl + endpoint);
 

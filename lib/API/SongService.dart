@@ -1,26 +1,21 @@
 import './SpotifyApiClient.dart';
-import './Track.dart';
+import '../models/Track.dart';
 
 class SongService{
 
-  SpotifyApiClient _apiClient; 
+  SpotifyApiClient _apiClient;
   
 
   SongService(this._apiClient);
 
 
-  Future<List<Track>?> getTopTrack() async {
+  Future<List<Track>> getTopTracks() async {
 
-    Map<String, dynamic> trackMap = await _apiClient.get('/tracks/0VjIjW4GlUZAMYd2vXMi3b');
+    Map<String, dynamic> trackMap = await _apiClient.get('/me/top/tracks');
 
     List<dynamic> trackList = trackMap['items'];
 
-    List<Track>? tracks = trackList.map((item) => Track.fromMap(item)).toList();
-
-    tracks = tracks.isNotEmpty ? tracks : null;
-
+    List<Track> tracks = trackList.map((item) => Track.fromMap(item)).toList();
     return tracks;
   }
-
-
 }
