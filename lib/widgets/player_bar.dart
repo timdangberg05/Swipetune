@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:swipetune/models/Track.dart';
 import '/homepage_songs/song.dart';
 
 class PlayerBar extends StatelessWidget {
-  final Song song;
+  final Track track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
 
   const PlayerBar({
     super.key,
-    required this.song,
+    required this.track,
     required this.isPlaying,
     required this.onPlayPause,
   });
@@ -46,7 +47,7 @@ class PlayerBar extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      song.coverUrl,
+                      track.albumImageUrl ?? '',
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
@@ -88,7 +89,7 @@ class PlayerBar extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          song.title,
+                          track.name,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -99,7 +100,7 @@ class PlayerBar extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          song.artist,
+                          track.artist,
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 12,

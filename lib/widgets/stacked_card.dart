@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '/homepage_songs/song.dart';
+import 'package:swipetune/models/Track.dart';
 import 'song_card.dart';
 
 class StackedCardUpwards extends StatelessWidget {
-  final Song song;
+  final Track track;
   final double position;
 
   const StackedCardUpwards({
     super.key,
-    required this.song,
+    required this.track,
     required this.position,
   });
 
@@ -27,7 +27,7 @@ class StackedCardUpwards extends StatelessWidget {
           child: SizedBox(
             width: MediaQuery.of(context).size.width * 0.85,
             height: MediaQuery.of(context).size.height * 0.55,
-            child: SongCard(song: song),
+            child: SongCard(track: track),
           ),
         ),
       ),

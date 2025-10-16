@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '/homepage_songs/song.dart';
+import 'package:swipetune/models/Track.dart';
 
 class SongCard extends StatelessWidget {
-  final Song song;
+  final Track track;
 
-  const SongCard({super.key, required this.song});
+  const SongCard({super.key, required this.track});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +17,7 @@ class SongCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.network(
-            song.coverUrl,
+            track.albumImageUrl,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => _coverFallback(),
             loadingBuilder: (context, child, loadingProgress) {
@@ -45,7 +45,7 @@ class SongCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  song.title,
+                  track.name,
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -55,7 +55,7 @@ class SongCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  song.artist,
+                  track.artist,
                   style: const TextStyle(fontSize: 16, color: Colors.white70),
                 ),
               ],

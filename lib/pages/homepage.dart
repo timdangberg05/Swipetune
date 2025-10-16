@@ -3,9 +3,8 @@ import 'package:swipetune/widgets/empty_state.dart';
 import 'package:swipetune/widgets/player_bar.dart';
 import 'package:swipetune/widgets/song_card.dart';
 import 'package:swipetune/widgets/stacked_card.dart';
-import '/homepage_songs/song.dart';
-import '../API/SongService.dart';
-import '../API/SpotifyApiClient.dart';
+import 'package:provider/provider.dart';
+import '../providers/spotify_data_provider.dart';
 import '/widgets/liquid_background.dart'; // 🧩 dein LiquidGlassBackground importieren
 
 class SwipeHomePage extends StatefulWidget {
@@ -17,12 +16,6 @@ class SwipeHomePage extends StatefulWidget {
 
 class _SwipeHomePageState extends State<SwipeHomePage>
     with TickerProviderStateMixin {
-  List<Song> _songs = [];
-  bool _isLoading = true;
-
-  int _currentIndex = 0;
-  final List<Song> _liked = [];
-  final List<Song> _disliked = [];
   bool _isPlaying = false;
   double _swipeOffset = 0.0;
 
@@ -31,7 +24,6 @@ class _SwipeHomePageState extends State<SwipeHomePage>
   late final AnimationController _colorController;
   late final AnimationController _morphController;
   late final ValueNotifier<Offset?> _logoCenterNotifier;
-  late final SongService _songService;
 
   @override
   void initState() {
@@ -53,8 +45,10 @@ class _SwipeHomePageState extends State<SwipeHomePage>
     )..repeat(reverse: true);
 
     _logoCenterNotifier = ValueNotifier(null);
-    _songService = SongService(SpotifyApiClient());
-    _loadRealSongs();
+    WidgetsBinding.instance.addPostFrameCallback((_)
+    {
+      context.read<SpotifyDataProvider>().loadTracks();
+    });
   }
 
   @override
@@ -66,64 +60,16 @@ class _SwipeHomePageState extends State<SwipeHomePage>
     super.dispose();
   }
 
-  Future<void> _loadRealSongs() async {
-  try {
-    final tracks = await _songService.getTopTracks();
-    print('✅ Tracks geladen: ${tracks.length}');
-
-    setState(() {
-      _songs = tracks.map((track) => Song
-      (
-        title: track.name,
-        artist: track.artist,
-        coverUrl: track.albumImageUrl ?? '',
-      )).toList();
-      _isLoading = false;
-    });
-    for (var track in tracks)
-    {
-      print( '  ${track.name} - ${track.artist}');
-    }
-  } catch (e) {
-    print(' Fehler: $e');
-    setState(() => _isLoading = false);
-  }
-}
-
-  Song? get _currentSong =>
-      _currentIndex < _songs.length ? _songs[_currentIndex] : null;
-
-  void _nextSong({bool liked = true}) {
-    if (_currentSong == null) return;
-    setState(() {
-      if (liked)
-        _liked.add(_songs[_currentIndex]);
-      else
-        _disliked.add(_songs[_currentIndex]);
-
-      if (_currentIndex < _songs.length - 1)
-        _currentIndex++;
-      else
-        _currentIndex = 0;
-
-      _swipeOffset = 0;
-    });
-  }
-
-  void _reloadSongs() {
-    setState(() {
-      _currentIndex = 0;
-      _liked.clear();
-      _disliked.clear();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final song = _currentSong;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    return Consumer<SpotifyDataProvider>
+    (
+      builder: (context, provider, child)
+      {
+        final track = provider.currenTrack;
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -142,7 +88,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
             // 🌑 Dunkles Overlay für bessere Lesbarkeit
             Container(color: Colors.black.withOpacity(0.25)),
 
-          if (_isLoading)
+          if (provider.isLoading)
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -157,7 +103,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
               ),
             ),
             // ❤️ Like / Dislike Counter
-            if(!_isLoading)
+            if(!provider.isLoading)
             Positioned(
               top: 16,
               right: 16,
@@ -169,7 +115,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${_liked.length} ♥  ${_disliked.length} ✕',
+                  '${provider.likedCount} ♥  ${provider.dislikedCount} ✕',
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),
@@ -177,7 +123,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
             ),
 
             // 🎵 Song-Karten + Swipe-Animation
-            if (!_isLoading && song != null)
+            if (!provider.isLoading && track != null)
               Center(
                 child: GestureDetector(
                   onTapDown: (details) =>
@@ -187,21 +133,24 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                     setState(() => _swipeOffset += details.delta.dx);
                   },
                   onHorizontalDragEnd: (_) {
-                    if (_swipeOffset > screenWidth * 0.25)
-                      _nextSong(liked: true);
-                    else if (_swipeOffset < -screenWidth * 0.25)
-                      _nextSong(liked: false);
-                    else
+                    if (_swipeOffset > screenWidth * 0.25) {
+                      provider.likeTrack();
                       setState(() => _swipeOffset = 0);
+                    } else if (_swipeOffset < -screenWidth * 0.25) {
+                      provider.dislikeTrack();
+                      setState(() => _swipeOffset = 0);
+                    } else {
+                      setState(() => _swipeOffset = 0);
+                    }
                   },
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       // Hintergrundkarten (gestapelt)
                       for (int i = 4; i >= 1; i--)
-                        if (_currentIndex + i < _songs.length)
+                        if (provider.currentIndex + i < provider.tracks.length)
                           StackedCardUpwards(
-                            song: _songs[_currentIndex + i],
+                            track: provider.tracks[provider.currentIndex + i],
                             position: i.toDouble(),
                           ),
 
@@ -211,7 +160,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                         transitionBuilder: (child, animation) =>
                             FadeTransition(opacity: animation, child: child),
                         child: Transform.translate(
-                          key: ValueKey(song.title),
+                          key: ValueKey(track.name),
                           offset: Offset(_swipeOffset, 0),
                           child: Stack(
                             alignment: Alignment.center,
@@ -219,7 +168,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                               SizedBox(
                                 width: screenWidth * 0.85,
                                 height: screenHeight * 0.55,
-                                child: SongCard(song: song),
+                                child: SongCard(track: track),
                               ),
 
                               // 💖 Flüssiges Icon (kleiner, rund, ohne Rotation)
@@ -298,16 +247,16 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                   ),
                 ),
               )
-            else if (!_isLoading && _songs.isEmpty)
-              EmptyState(onReload: _reloadSongs),
+            else if (!provider.isLoading && provider.tracks.isEmpty)
+              EmptyState(onReload: provider.reload),
 
             // 🎧 Player unten
-            if(!_isLoading)
+            if(!provider.isLoading && track != null)
             Align(
               alignment: Alignment.bottomCenter,
-              child: song != null
+              child: track != null
                   ? PlayerBar(
-                      song: song,
+                      track: track,
                       isPlaying: _isPlaying,
                       onPlayPause: () =>
                           setState(() => _isPlaying = !_isPlaying),
@@ -317,6 +266,8 @@ class _SwipeHomePageState extends State<SwipeHomePage>
           ],
         ),
       ),
+    );
+      },
     );
   }
 }
