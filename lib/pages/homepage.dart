@@ -140,13 +140,6 @@ class _SwipeHomePageState extends State<SwipeHomePage>
 
   @override
   Widget build(BuildContext context) {
-    if (_timeController == null ||
-    _colorController == null ||
-    _morphController == null ||
-    _logoCenterNotifier == null) {
-  return const SizedBox.shrink();
-}
-
     final song = _currentSong;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
@@ -156,7 +149,7 @@ class _SwipeHomePageState extends State<SwipeHomePage>
       body: SafeArea(
         child: Stack(
           children: [
-            // 🌊 LiquidGlassBackground einfügen
+            // 🌊 Flüssiger Hintergrund
             Positioned.fill(
               child: LiquidGlassBackground(
                 time: _timeController,
@@ -166,10 +159,10 @@ class _SwipeHomePageState extends State<SwipeHomePage>
               ),
             ),
 
-            // 🌑 Optional: leichtes Overlay für Lesbarkeit
+            // 🌑 Dunkles Overlay für bessere Lesbarkeit
             Container(color: Colors.black.withOpacity(0.25)),
 
-            // ❤️ Zähler oben rechts
+            // ❤️ Like / Dislike Counter
             Positioned(
               top: 16,
               right: 16,
@@ -188,19 +181,17 @@ class _SwipeHomePageState extends State<SwipeHomePage>
               ),
             ),
 
-            // 🎵 Song-Karten
+            // 🎵 Song-Karten + Swipe-Animation
             if (song != null)
               Center(
                 child: GestureDetector(
-                  onTapDown: (details) {
-                    // Interaktion mit Hintergrund
-                    _logoCenterNotifier.value = details.globalPosition;
-                  },
+                  onTapDown: (details) =>
+                      _logoCenterNotifier.value = details.globalPosition,
                   onTapUp: (_) => _logoCenterNotifier.value = null,
                   onHorizontalDragUpdate: (details) {
                     setState(() => _swipeOffset += details.delta.dx);
                   },
-                  onHorizontalDragEnd: (details) {
+                  onHorizontalDragEnd: (_) {
                     if (_swipeOffset > screenWidth * 0.25)
                       _nextSong(liked: true);
                     else if (_swipeOffset < -screenWidth * 0.25)
@@ -235,29 +226,73 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                                 height: screenHeight * 0.55,
                                 child: SongCard(song: song),
                               ),
-                              // Herz/Kreuz beim Swipen
+
+                              // 💖 Flüssiges Icon (kleiner, rund, ohne Rotation)
                               if (_swipeOffset.abs() > 10)
                                 Positioned(
                                   top: 40,
                                   left: _swipeOffset > 0 ? 20 : null,
                                   right: _swipeOffset < 0 ? 20 : null,
-                                  child: Transform.rotate(
-                                    angle: _swipeOffset / 300,
-                                    child: Opacity(
-                                      opacity: (_swipeOffset.abs() / 150)
-                                          .clamp(0.0, 1.0),
-                                      child: Icon(
-                                        _swipeOffset > 0
-                                            ? Icons.favorite
-                                            : Icons.close,
-                                        color: _swipeOffset > 0
-                                            ? Colors.greenAccent
-                                            : Colors.redAccent,
-                                        size: 100 *
-                                            (_swipeOffset.abs() / 150)
-                                                .clamp(0.7, 1.0),
-                                      ),
-                                    ),
+                                  child: AnimatedBuilder(
+                                    animation: _colorController,
+                                    builder: (context, _) {
+                                      // 🌈 Farbverlauf
+                                      final colorTween =
+                                          TweenSequence<Color?>([
+                                        TweenSequenceItem(
+                                          tween: ColorTween(
+                                              begin: Colors.purpleAccent,
+                                              end: Colors.tealAccent),
+                                          weight: 1,
+                                        ),
+                                        TweenSequenceItem(
+                                          tween: ColorTween(
+                                              begin: Colors.tealAccent,
+                                              end: Colors.blueAccent),
+                                          weight: 1,
+                                        ),
+                                        TweenSequenceItem(
+                                          tween: ColorTween(
+                                              begin: Colors.blueAccent,
+                                              end: Colors.pinkAccent),
+                                          weight: 1,
+                                        ),
+                                      ]);
+                                      final dynamicColor =
+                                          colorTween.evaluate(_colorController)!;
+
+                                      // ✨ Dezente Skalierung
+                                      final scale = (_swipeOffset.abs() / 150)
+                                          .clamp(0.9, 1.05);
+
+                                      return Opacity(
+                                        opacity:
+                                            (_swipeOffset.abs() / 150).clamp(
+                                          0.0,
+                                          1.0,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(18),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: RadialGradient(
+                                              colors: [
+                                                dynamicColor.withOpacity(0.4),
+                                                Colors.transparent
+                                              ],
+                                              stops: const [0.0, 1.0],
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            _swipeOffset > 0
+                                                ? Icons.favorite
+                                                : Icons.close,
+                                            color: dynamicColor,
+                                            size: 60 * scale, // 🎯 kleiner & ruhiger
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                             ],
