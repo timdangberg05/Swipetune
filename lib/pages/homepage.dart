@@ -6,6 +6,7 @@ import 'package:swipetune/widgets/stacked_card.dart';
 import 'package:provider/provider.dart';
 import '../providers/spotify_data_provider.dart';
 import '/widgets/liquid_background.dart'; // 🧩 dein LiquidGlassBackground importieren
+import 'songdetails.dart';
 
 class SwipeHomePage extends StatefulWidget {
   const SwipeHomePage({super.key});
@@ -126,6 +127,18 @@ class _SwipeHomePageState extends State<SwipeHomePage>
             if (!provider.isLoading && track != null)
               Center(
                 child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        transitionDuration: const Duration(milliseconds: 700),
+                        pageBuilder: (_, __, ___) => SongDetailPage(song: song),
+                        transitionsBuilder: (_, animation, __, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
+                  },
                   onTapDown: (details) =>
                       _logoCenterNotifier.value = details.globalPosition,
                   onTapUp: (_) => _logoCenterNotifier.value = null,
