@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '/homepage_songs/song.dart';
+import 'package:swipetune/models/Track.dart';
 import '/widgets/liquid_background.dart';
 
 class SongDetailPage extends StatefulWidget {
-  final Song song;
-  const SongDetailPage({super.key, required this.song});
+  final Track track;
+  const SongDetailPage({super.key, required this.track});
 
   @override
   State<SongDetailPage> createState() => _SongDetailPageState();
@@ -52,7 +52,7 @@ class _SongDetailPageState extends State<SongDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    final song = widget.song;
+    final track = widget.track;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -100,7 +100,7 @@ class _SongDetailPageState extends State<SongDetailPage>
                       )
                     ],
                     image: DecorationImage(
-                      image: NetworkImage(song.coverUrl),
+                      image: NetworkImage(track.albumImageUrl),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -108,7 +108,7 @@ class _SongDetailPageState extends State<SongDetailPage>
 
                 const SizedBox(height: 30),
                 Text(
-                  song.title,
+                  track.name,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -118,7 +118,7 @@ class _SongDetailPageState extends State<SongDetailPage>
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  song.artist,
+                  track.artist,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 18,

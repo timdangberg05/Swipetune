@@ -132,7 +132,13 @@ class _SwipeHomePageState extends State<SwipeHomePage>
                       context,
                       PageRouteBuilder(
                         transitionDuration: const Duration(milliseconds: 700),
-                        pageBuilder: (_, __, ___) => SongDetailPage(song: song),
+                        pageBuilder: (_, __, ___) {
+                        final track = provider.currenTrack;
+                        if (track == null) {
+                          return const SizedBox.shrink();  // oder error page
+                        }
+                        return SongDetailPage(track: track);
+},
                         transitionsBuilder: (_, animation, __, child) {
                           return FadeTransition(opacity: animation, child: child);
                         },
