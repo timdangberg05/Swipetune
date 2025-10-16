@@ -7,6 +7,7 @@ import '/homepage_songs/song.dart';
 import '../API/SongService.dart';
 import '../API/SpotifyApiClient.dart';
 import '/widgets/liquid_background.dart'; // 🧩 dein LiquidGlassBackground importieren
+import 'songdetails.dart';
 
 class SwipeHomePage extends StatefulWidget {
   const SwipeHomePage({super.key});
@@ -180,6 +181,18 @@ class _SwipeHomePageState extends State<SwipeHomePage>
             if (!_isLoading && song != null)
               Center(
                 child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        transitionDuration: const Duration(milliseconds: 700),
+                        pageBuilder: (_, __, ___) => SongDetailPage(song: song),
+                        transitionsBuilder: (_, animation, __, child) {
+                          return FadeTransition(opacity: animation, child: child);
+                        },
+                      ),
+                    );
+                  },
                   onTapDown: (details) =>
                       _logoCenterNotifier.value = details.globalPosition,
                   onTapUp: (_) => _logoCenterNotifier.value = null,
