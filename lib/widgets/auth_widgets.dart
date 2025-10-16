@@ -80,8 +80,7 @@ class SpotifyLoginPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ... unverändert
-// ... (restlicher Code bleibt gleich)
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

@@ -8,15 +8,17 @@ class LiquidGlassBackground extends StatefulWidget {
   final Animation<double> colorTransitionValue;
   final ValueNotifier<Offset?> spotifyLogoCenterNotifier;
   final AnimationController? backgroundMorphController;
+  final Animation<double>? homeTransitionController;
 
   const LiquidGlassBackground({
-    super.key, 
+    super.key,
     required this.time,
     required this.colorTransitionValue,
     required this.spotifyLogoCenterNotifier,
     this.backgroundMorphController,
+    this.homeTransitionController,
   });
-  
+
   @override
   State<LiquidGlassBackground> createState() => _LiquidGlassBackgroundState();
 }
@@ -25,10 +27,8 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> {
   late final List<Blob> _blobs;
   final List<Color> _originalColors = [];
   final List<Color> _spotifyColors = [
-    const Color(0xFF1DB954).withOpacity(0.6),
-    const Color(0xFF1ED760).withOpacity(0.5),
-    const Color(0xFF4AE280).withOpacity(0.5),
-    const Color(0xFF2DEB70).withOpacity(0.4),
+    const Color(0xFF1DB954).withOpacity(0.6), const Color(0xFF1ED760).withOpacity(0.5),
+    const Color(0xFF4AE280).withOpacity(0.5), const Color(0xFF2DEB70).withOpacity(0.4),
   ];
 
   @override
@@ -50,48 +50,57 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([widget.time, widget.colorTransitionValue, widget.spotifyLogoCenterNotifier, widget.backgroundMorphController]),
+      animation: Listenable.merge([widget.time, widget.colorTransitionValue, widget.spotifyLogoCenterNotifier, widget.backgroundMorphController, widget.homeTransitionController]),
       builder: (context, child) {
         final size = MediaQuery.of(context).size;
         final logoCenter = widget.spotifyLogoCenterNotifier.value;
         const repulsionRadius = 90.0;
         final morphValue = widget.backgroundMorphController?.value ?? 0.0;
+        final homeTransition = widget.homeTransitionController?.value ?? 0.0;
 
         for (int i = 0; i < _blobs.length; i++) {
           final blob = _blobs[i];
           
-          blob.position += blob.velocity * 0.015;
-
-          if (logoCenter != null) {
-            final blobPixelPosition = Offset(blob.position.dx * size.width, blob.position.dy * size.height);
-            final distanceVector = blobPixelPosition - logoCenter;
-            
-            if (distanceVector.distance < repulsionRadius && distanceVector.distance > 0.1) {
-              final normal = (distanceVector / distanceVector.distance);
-              final dot = blob.velocity.dx * normal.dx + blob.velocity.dy * normal.dy;
-              blob.velocity = blob.velocity - (normal * (2 * dot));
-              blob.position += Offset(normal.dx * 0.03, normal.dy * 0.03);
+          if (homeTransition > 0.0) {
+            final navBarY = size.height - 55 - (MediaQuery.of(context).padding.bottom);
+            final targetPosition = Offset(
+              (size.width / (_blobs.length + 1)) * (i + 1),
+              navBarY + (math.sin(i + widget.time.value * 2 * (i + 1)) * 15),
+            );
+            final currentPixelPosition = Offset(blob.position.dx * size.width, blob.position.dy * size.height);
+            final newPosition = Offset.lerp(currentPixelPosition, targetPosition, 0.05)!;
+            blob.position = Offset(newPosition.dx / size.width, newPosition.dy / size.height);
+            blob.velocity *= (1 - homeTransition * 0.2);
+          } else {
+            blob.position += blob.velocity * 0.015;
+            if (logoCenter != null) {
+              final blobPixelPosition = Offset(blob.position.dx * size.width, blob.position.dy * size.height);
+              final distanceVector = blobPixelPosition - logoCenter;
+              if (distanceVector.distance < repulsionRadius && distanceVector.distance > 0.1) {
+                final normal = (distanceVector / distanceVector.distance);
+                final dot = blob.velocity.dx * normal.dx + blob.velocity.dy * normal.dy;
+                blob.velocity = blob.velocity - (normal * (2 * dot));
+                blob.position += Offset(normal.dx * 0.03, normal.dy * 0.03);
+              }
             }
+            if (blob.position.dx > 1.2) blob.position = Offset(-0.2, blob.position.dy);
+            if (blob.position.dx < -0.2) blob.position = Offset(1.2, blob.position.dy);
+            if (blob.position.dy > 1.2) blob.position = Offset(blob.position.dx, -0.2);
+            if (blob.position.dy < -0.2) blob.position = Offset(blob.position.dx, 1.2);
           }
-
-          if (blob.position.dx > 1.2) blob.position = Offset(-0.2, blob.position.dy);
-          if (blob.position.dx < -0.2) blob.position = Offset(1.2, blob.position.dy);
-          if (blob.position.dy > 1.2) blob.position = Offset(blob.position.dx, -0.2);
-          if (blob.position.dy < -0.2) blob.position = Offset(blob.position.dx, 1.2);
-
           blob.color = Color.lerp(_originalColors[i], _spotifyColors[i % _spotifyColors.length], widget.colorTransitionValue.value)!;
         }
         
+        final auroraOpacity = morphValue * (1 - homeTransition);
+
         return Stack(
           children: [
-            // Der ursprüngliche Meta-Bubble-Hintergrund
             CustomPaint(
               size: size,
-              painter: LiquidBlobPainter(blobs: _blobs, morphValue: morphValue),
+              painter: LiquidBlobPainter(blobs: _blobs, morphValue: morphValue, homeTransition: homeTransition),
             ),
-            // Der Aurora-Hintergrund, der sanft eingeblendet wird
             Opacity(
-              opacity: morphValue,
+              opacity: auroraOpacity.clamp(0.0, 1.0),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -115,29 +124,28 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> {
 
 class LiquidBlobPainter extends CustomPainter {
   final List<Blob> blobs;
-  final double morphValue; // Wert von 0.0 (Bubbles) bis 1.0 (Aurora)
-  LiquidBlobPainter({required this.blobs, required this.morphValue});
+  final double morphValue;
+  final double homeTransition;
+
+  LiquidBlobPainter({required this.blobs, required this.morphValue, required this.homeTransition});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Der Blur-Effekt wird stärker, je mehr der Hintergrund morpht
-    final double sigma = lerpDouble(25, 100, morphValue)!;
+    // Der Unschärfe-Effekt wird stärker, je mehr die Blobs in die Leiste morphen.
+    final double sigma = lerpDouble(25, 50, homeTransition)!;
     
     final filterPaint = Paint()
       ..imageFilter = ImageFilter.compose(
         outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.decal),
-        inner: ColorFilter.matrix([
-          1, 0, 0, 0, 0,
-          0, 1, 0, 0, 0,
-          0, 0, 1, 0, 0,
-          0, 0, 0, 20, -10,
-        ]),
+        inner: ColorFilter.matrix([1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 20, -10]),
       );
     canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), filterPaint);
     for (final blob in blobs) {
+      // KORREKTUR: Die Farbe der Blobs verblasst nicht mehr. Sie bleiben sichtbar.
       final paint = Paint()..color = blob.color;
-      canvas.drawCircle(Offset(blob.position.dx * size.width, blob.position.dy * size.height),
-          blob.radius * size.shortestSide, paint);
+      // Der Radius der Blobs schrumpft, während sie sich der Leiste nähern.
+      final radius = lerpDouble(blob.radius, blob.radius * 0.5, homeTransition)!;
+      canvas.drawCircle(Offset(blob.position.dx * size.width, blob.position.dy * size.height), radius * size.shortestSide, paint);
     }
     canvas.restore();
   }
