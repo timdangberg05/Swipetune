@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../homepage_songs/song.dart';
-import '../homepage_widgets/empty_state.dart';
 import '../widgets/song_card.dart';
 import '../widgets/stacked_card.dart';
 
@@ -106,8 +105,6 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
           ],
         ),
       ),
-    );
-      },
     );
   }
 }
