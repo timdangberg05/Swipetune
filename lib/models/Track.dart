@@ -6,13 +6,21 @@ class Track{
   final String name;
   final String artist;
   final String albumImageUrl;
+  final int popularity;
+  final String? previewUrl;
 
-  Track({required this.id, required this.name, required this.artist, required this.albumImageUrl});
+
+  Track({required this.id, required this.name, required this.artist, required this.albumImageUrl, required this.popularity, required this.previewUrl});
+
+
+
 
   Track.fromMap(Map<String, dynamic> map)
     : id = map['id'],
       name = map['name'],
       artist = map['artists'][0]['name'],
-      albumImageUrl = map['album']['images'][0]['url'];
+      albumImageUrl = map['album']['images'][0]['url'],
+      popularity = map['popularity'],
+      previewUrl = map['preview_url'];
   
 }

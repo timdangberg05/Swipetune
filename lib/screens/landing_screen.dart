@@ -34,7 +34,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _authPageController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _backgroundMorphController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _homeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-
+    _checkExistingLogin();
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) _transitionController.forward();
     });
