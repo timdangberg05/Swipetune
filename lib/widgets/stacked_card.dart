@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:swipetune/models/Track.dart';
 import '../homepage_songs/song.dart';
 import 'song_card.dart';
 
 /// Stacked card for showing next song in the background
 class GlassStackedCard extends StatelessWidget {
-  final Song song;
+  final Track track;
   final double position;
 
   const GlassStackedCard({
     super.key,
-    required this.song,
+    required this.track,
     required this.position,
   });
 
@@ -26,7 +27,7 @@ class GlassStackedCard extends StatelessWidget {
         child: Opacity(
           opacity: opacity,
           child: GlassSongCard(
-            song: song,
+            track: track,
             isPlaying: false,
             onPlayPause: () {}, // Non-interactive in stack
           ),

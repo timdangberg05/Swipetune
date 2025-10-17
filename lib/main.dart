@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:swipetune/API/SongService.dart';
+import 'package:swipetune/API/SpotifyApiClient.dart';
+import 'package:swipetune/providers/spotify_data_provider.dart';
 
 import 'package:swipetune/screens/landing_screen.dart';
 import 'package:swipetune/screens/auth_page.dart';
-import 'package:swipetune/screens/home_screen.dart';
 import 'package:swipetune/screens/library_screen.dart';
 import 'package:swipetune/screens/main_screen.dart'; 
 import 'package:swipetune/screens/onboarding_screen.dart';

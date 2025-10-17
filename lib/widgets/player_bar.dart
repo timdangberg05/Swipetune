@@ -1,19 +1,20 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swipetune/models/Track.dart';
 import '../homepage_songs/song.dart';
 
 /// Animated music player with liquid glass design for the swipe card
 class LiquidMusicPlayer extends StatelessWidget {
-  final Song song;
+  final Track track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
 
   const LiquidMusicPlayer({
     super.key,
-    required this.song,
+    required this.track,
     required this.isPlaying,
-    required this.onPlayPause,
+    required this.onPlayPause, 
   });
 
   @override
@@ -26,7 +27,7 @@ class LiquidMusicPlayer extends StatelessWidget {
         children: [
           // Song title and artist
           Text(
-            song.title,
+            track.name,
             style: GoogleFonts.manrope(
               fontSize: 24,
               fontWeight: FontWeight.w800,
@@ -37,7 +38,7 @@ class LiquidMusicPlayer extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            song.artist,
+            track.artist,
             style: GoogleFonts.manrope(
               fontSize: 16,
               color: Colors.white70,

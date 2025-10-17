@@ -1,19 +1,20 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:swipetune/models/Track.dart';
 import '../homepage_songs/song.dart';
 import 'player_bar.dart';
 
 /// Modern glass-morphism song card with integrated music player
 class GlassSongCard extends StatelessWidget {
-  final Song song;
+  final Track track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
 
   const GlassSongCard({
     super.key,
-    required this.song,
+    required this.track,
     required this.isPlaying,
-    required this.onPlayPause,
+    required this.onPlayPause, 
   });
 
   @override
@@ -52,7 +53,7 @@ class GlassSongCard extends StatelessWidget {
             ),
             // Cover image
             Image.network(
-              song.coverUrl,
+              track.albumImageUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => _coverFallback(),
             ),
@@ -72,7 +73,7 @@ class GlassSongCard extends StatelessWidget {
             ),
             // Integrated liquid music player
             LiquidMusicPlayer(
-              song: song,
+              track: track,
               isPlaying: isPlaying,
               onPlayPause: onPlayPause,
             ),
