@@ -1,23 +1,26 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swipetune/models/Track.dart';
 
-/// Reusable song list item component
 class SongItem extends StatelessWidget {
-  final String title;
-  final String artist;
-  final String duration;
+  final Track track;
   final int index;
   final VoidCallback onTap;
 
   const SongItem({
     super.key,
-    required this.title,
-    required this.artist,
-    required this.duration,
+    required this.track,
     required this.index,
     required this.onTap,
   });
+
+  String _formatDuration(int ms) {
+    final duration = Duration(milliseconds: ms);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,38 +50,25 @@ class SongItem extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white.withOpacity(0.12),
-                              Colors.white.withOpacity(0.04),
-                            ],
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: GoogleFonts.manrope(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white.withOpacity(0.7),
-                            ),
-                          ),
-                        ),
-                      ),
+                      track.albumImageUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                track.albumImageUrl,
+                                width: 42,
+                                height: 42,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _buildIndexBox(),
+                              ),
+                            )
+                          : _buildIndexBox(),
                       SizedBox(width: size.width * 0.03),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              title,
+                              track.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.manrope(
@@ -89,7 +79,7 @@ class SongItem extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              artist,
+                              track.artist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.manrope(
@@ -101,7 +91,7 @@ class SongItem extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        duration,
+                        _formatDuration(track.durationMs),
                         style: GoogleFonts.manrope(
                           fontSize: 12,
                           color: Colors.white.withOpacity(0.4),
@@ -112,6 +102,34 @@ class SongItem extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndexBox() {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.12),
+            Colors.white.withOpacity(0.04),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          '${index + 1}',
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white.withOpacity(0.7),
           ),
         ),
       ),

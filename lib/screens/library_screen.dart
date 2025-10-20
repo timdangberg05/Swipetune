@@ -10,12 +10,18 @@ import 'package:provider/provider.dart';
 import '../providers/spotify_data_provider.dart';
 import '../models/playlist_model.dart';
 
+
+
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
+
+
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
+
+
 
 class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProviderStateMixin {
   PlaylistModel? _selectedPlaylist;
@@ -71,6 +77,8 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     });
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -92,6 +100,8 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     );
   }
 
+
+
   Widget _buildMainLibraryView(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).padding.bottom + 90;
@@ -108,8 +118,6 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCompactStatsRow(context),
-                SizedBox(height: size.height * 0.03),
                 Padding(
                   padding: EdgeInsets.only(left: size.width * 0.02, bottom: size.height * 0.015),
                   child: Text(
@@ -142,9 +150,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
                 }
                 final playlist = playlists[index];
                 return PlaylistItem(
-                  name: playlist.name,
-                  songCount: '${playlist.trackCount} Tracks',
-                  icon: Icons.library_music,
+                  playlist: playlist,
                   onTap: () => _openPlaylist(playlist),
                 );
               },
@@ -156,60 +162,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildCompactStatsRow(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: size.width * 0.04,
-            vertical: size.height * 0.02,
-          ),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.12),
-                Colors.white.withOpacity(0.04),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.15)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildCompactStat(Icons.favorite, '247'),
-              _buildCompactStat(Icons.library_music, '8'),
-              _buildCompactStat(Icons.access_time, '12h'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildCompactStat(IconData icon, String value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: Colors.white.withOpacity(0.9), size: 18),
-        const SizedBox(width: 6),
-        Text(
-          value,
-          style: GoogleFonts.manrope(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildPlaylistDetailView(BuildContext context, PlaylistModel playlist) {
     final size = MediaQuery.of(context).size;
@@ -217,6 +170,8 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
       parent: _morphController,
       curve: Curves.easeInOutCubicEmphasized,
     );
+
+
 
     return AnimatedBuilder(
       animation: morphAnim,
@@ -239,6 +194,8 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
       },
     );
   }
+
+
 
   Widget _buildDetailContent(BuildContext context, PlaylistModel playlist, double progress) {
     final size = MediaQuery.of(context).size;
@@ -273,11 +230,9 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final song = songs[index];
+                  final track = songs[index];
                   return SongItem(
-                    title: song.name,
-                    artist: song.artist,
-                    duration: '',
+                    track: track,
                     index: index,
                     onTap: () {},
                   );
@@ -291,12 +246,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     );
   }
 
-  String _formatDuration(int ms) {
-    final duration = Duration(milliseconds: ms);
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
+
 
   List<PlaylistModel> _getPlaylists() {
     final provider = context.watch<SpotifyDataProvider>();
@@ -304,12 +254,16 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
   }
 }
 
+
+
 class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
   final PlaylistModel playlist;
   final VoidCallback onBack;
   final double collapseProgress;
+
+
 
   _PlaylistHeaderDelegate({
     required this.minHeight,
@@ -319,11 +273,17 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.collapseProgress,
   });
 
+
+
   @override
   double get minExtent => minHeight;
 
+
+
   @override
   double get maxExtent => maxHeight;
+
+
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -373,25 +333,55 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                 left: iconLeft,
                 child: Hero(
                   tag: 'playlist_${playlist.name}',
-                  child: Container(
-                    width: iconSize,
-                    height: iconSize,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16 - (4 * progress)),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withOpacity(0.2),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.library_music,
-                      color: Colors.white,
-                      size: iconSize * 0.45,
-                    ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16 - (4 * progress)),
+                    child: playlist.imageUrl != null && playlist.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            playlist.imageUrl!,
+                            width: iconSize,
+                            height: iconSize,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: iconSize,
+                              height: iconSize,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16 - (4 * progress)),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white.withOpacity(0.2),
+                                    Colors.white.withOpacity(0.05),
+                                  ],
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.library_music,
+                                color: Colors.white,
+                                size: iconSize * 0.45,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: iconSize,
+                            height: iconSize,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16 - (4 * progress)),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withOpacity(0.2),
+                                  Colors.white.withOpacity(0.05),
+                                ],
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.library_music,
+                              color: Colors.white,
+                              size: iconSize * 0.45,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -466,6 +456,8 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
       ),
     );
   }
+
+
 
   @override
   bool shouldRebuild(_PlaylistHeaderDelegate oldDelegate) {

@@ -1,19 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swipetune/models/playlist_model.dart';
 
-/// Reusable playlist list item component
 class PlaylistItem extends StatelessWidget {
-  final String name;
-  final String songCount;
-  final IconData icon;
+  final PlaylistModel playlist;
   final VoidCallback onTap;
 
   const PlaylistItem({
     super.key,
-    required this.name,
-    required this.songCount,
-    required this.icon,
+    required this.playlist,
     required this.onTap,
   });
 
@@ -53,23 +49,19 @@ class PlaylistItem extends StatelessWidget {
                   child: Row(
                     children: [
                       Hero(
-                        tag: 'playlist_$name',
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white.withOpacity(0.15),
-                                Colors.white.withOpacity(0.05),
-                              ],
-                            ),
-                          ),
-                          child: Icon(icon, color: Colors.white.withOpacity(0.9), size: 24),
-                        ),
+                        tag: 'playlist_${playlist.name}',
+                        child: playlist.imageUrl != null && playlist.imageUrl!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  playlist.imageUrl!,
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                                ),
+                              )
+                            : _buildFallbackIcon(),
                       ),
                       SizedBox(width: size.width * 0.04),
                       Expanded(
@@ -77,7 +69,7 @@ class PlaylistItem extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              name,
+                              playlist.name,
                               style: GoogleFonts.manrope(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -86,7 +78,7 @@ class PlaylistItem extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              songCount,
+                              '${playlist.trackCount} Tracks',
                               style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 color: Colors.white.withOpacity(0.5),
@@ -108,6 +100,25 @@ class PlaylistItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFallbackIcon() {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.15),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+      ),
+      child: Icon(Icons.library_music, color: Colors.white.withOpacity(0.9), size: 24),
     );
   }
 }
