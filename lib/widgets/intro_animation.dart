@@ -5,18 +5,12 @@ import 'action_buttons.dart';
 class IntroAnimation extends StatelessWidget {
   final AnimationController controller;
   final AnimationController spotifyAuthController;
-  final AnimationController authPageController;
-  final VoidCallback onLogin;
-  final VoidCallback onSignUp;
   final VoidCallback onSpotifyLogin;
 
   const IntroAnimation({
     super.key,
     required this.controller,
     required this.spotifyAuthController,
-    required this.authPageController,
-    required this.onLogin,
-    required this.onSignUp,
     required this.onSpotifyLogin,
   });
 
@@ -33,20 +27,17 @@ class IntroAnimation extends StatelessWidget {
     final spotifyFadeOut = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: spotifyAuthController, curve: const Interval(0.0, 0.4, curve: Curves.easeOut))
     );
-    final authFadeOut = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: authPageController, curve: const Interval(0.0, 0.5, curve: Curves.easeOut))
-    );
     
     return AnimatedBuilder(
-      animation: Listenable.merge([controller, spotifyAuthController, authPageController]),
+      animation: Listenable.merge([controller, spotifyAuthController]),
       builder: (context, child) {
-        final bool isVisible = spotifyAuthController.value == 0 && authPageController.value == 0;
+        final bool isVisible = spotifyAuthController.value == 0;
 
         // IgnorePointer verhindert "Ghost Clicks", wenn die UI ausgeblendet ist
         return IgnorePointer(
           ignoring: !isVisible,
           child: FadeTransition(
-            opacity: isVisible ? const AlwaysStoppedAnimation(1.0) : (spotifyAuthController.value > 0 ? spotifyFadeOut : authFadeOut),
+            opacity: isVisible ? const AlwaysStoppedAnimation(1.0) : spotifyFadeOut,
             child: child,
           ),
         );
@@ -66,7 +57,7 @@ class IntroAnimation extends StatelessWidget {
                     style: GoogleFonts.manrope(fontSize: 56, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -2),
                   ),
                   const SizedBox(height: 16),
-                  Text("Sign up or log in to begin your sonic journey.",
+                  Text("Connect with Spotify to begin your sonic journey.",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.manrope(fontSize: 16, color: Colors.white70),
                   ),
@@ -78,28 +69,16 @@ class IntroAnimation extends StatelessWidget {
             bottom: safeArea.bottom + 20,
             left: 24,
             right: 24,
-            child: SlideTransition(
-              position: buttonsSlide,
-              child: FadeTransition(
-                opacity: textFade,
-                child: Column(
-                  children: [
-                    ActionButton(text: "Sign up free", accentColor: const Color(0xFF9B51E0), onTap: onSignUp),
-                    const SizedBox(height: 16),
-                    SpotifyButton(onTap: onSpotifyLogin),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      child: const Text("Log in", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                      onPressed: onLogin,
-                    ),
-                  ],
+              child: SlideTransition(
+                position: buttonsSlide,
+                child: FadeTransition(
+                  opacity: textFade,
+                  child: SpotifyButton(onTap: onSpotifyLogin),
                 ),
               ),
-            ),
           ),
         ],
       ),
     );
   }
 }
-
