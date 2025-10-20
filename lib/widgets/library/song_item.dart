@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swipetune/models/Track.dart';
@@ -53,13 +54,17 @@ class SongItem extends StatelessWidget {
                       track.albumImageUrl.isNotEmpty
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                track.albumImageUrl,
+                              child: CachedNetworkImage(
+                                imageUrl: track.albumImageUrl,
                                 width: 42,
                                 height: 42,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _buildIndexBox(),
-                              ),
+                                placeholder: (context, url) => Container(
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
+                                errorWidget: (context, url, error) => Icon(Icons.music_note),
+                              )
+
                             )
                           : _buildIndexBox(),
                       SizedBox(width: size.width * 0.03),

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swipetune/models/Track.dart';
@@ -336,12 +337,12 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16 - (4 * progress)),
                     child: playlist.imageUrl != null && playlist.imageUrl!.isNotEmpty
-                        ? Image.network(
-                            playlist.imageUrl!,
+                        ? CachedNetworkImage(
+                            imageUrl: playlist.imageUrl!,
                             width: iconSize,
                             height: iconSize,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorWidget: (_, __, ___) => Container(
                               width: iconSize,
                               height: iconSize,
                               decoration: BoxDecoration(

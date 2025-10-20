@@ -21,6 +21,7 @@ class SpotifyDataProvider extends ChangeNotifier {
   bool _isPrefetching = false;
   String?  _swipTunePlaylistId;
   bool _isLoadingPlaylist = false;
+  bool _isLoadingPlaylistTracks = false;
 
   List<Track> get tracks => _tracks;
   List<Track> get likedTracks => _likedTracks;
@@ -36,6 +37,7 @@ class SpotifyDataProvider extends ChangeNotifier {
   List<PlaylistModel> get userPlaylists => _userPlaylists;
   String? get swipTunePlaylistId => _swipTunePlaylistId;
   bool get isLoadingPlaylists => _isLoadingPlaylist;
+  bool get isLoadingPlaylistTracks => _isLoadingPlaylistTracks;
 
   SpotifyDataProvider(this._songService, this._playlistSerivce);
 
@@ -57,29 +59,51 @@ class SpotifyDataProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  Future<void> loadUserPlaylists() async
-  {
-    _isLoadingPlaylist = true;
-    notifyListeners();
+  Future<void> loadUserPlaylists() async {
+  _isLoadingPlaylist = true;
+  notifyListeners();
 
-    try
-    {
+  try {
+    if (_userPlaylists.isEmpty) {
       _userPlaylists = await _playlistSerivce.getUserPlaylists();
-      // for(var playlist in _userPlaylists)
-      // {
-      //   playlist.playlistTracks.clear();
-      //   final playlistTracks = await _playlistSerivce.getPlaylistTracks(playlist.id);
-      //   playlist.playlistTracks.addAll(playlistTracks);
-      // }
-      _isLoadingPlaylist = false;
-      notifyListeners();
     }
-    catch(e)
-    {
-      _isLoadingPlaylist = false;
+    
+    _isLoadingPlaylist = false;
+    notifyListeners();
+    loadAllPlaylistTracksInBackground();
+  } catch (e) {
+    _isLoadingPlaylist = false;
+    notifyListeners();
+  }
+}
+Future<void> loadAllPlaylistTracksInBackground() async 
+{
+    if (_isLoadingPlaylistTracks) return;
+    
+    _isLoadingPlaylistTracks = true;
+    print('=== BACKGROUND LOADING TRACKS ===');
+
+    try {
+      final futures = _userPlaylists.map((playlist) async {
+        if (playlist.playlistTracks.isEmpty) {
+          final tracks = await _playlistSerivce.getPlaylistTracks(playlist.id);
+          playlist.playlistTracks.addAll(tracks);
+          print('✓ Loaded: ${playlist.name} (${tracks.length} tracks)');
+          notifyListeners();
+        }
+      }).toList();
+
+      await Future.wait(futures);
+      print('✓ All tracks loaded!');
+    } catch (e) {
+      print('❌ Background loading error: $e');
+    } finally {
+      _isLoadingPlaylistTracks = false;
       notifyListeners();
     }
   }
+
+
 
   Future<void> createLikeSongsPlaylist(String userId) async 
   {

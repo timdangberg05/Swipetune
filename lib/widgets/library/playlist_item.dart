@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:swipetune/models/playlist_model.dart';
@@ -53,13 +54,13 @@ class PlaylistItem extends StatelessWidget {
                         child: playlist.imageUrl != null && playlist.imageUrl!.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  playlist.imageUrl!,
+                                child: CachedNetworkImage(
+                                  imageUrl: playlist.imageUrl!,
                                   width: 48,
                                   height: 48,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => _buildFallbackIcon(),
-                                ),
+                                  errorWidget: (_, __, ___) => _buildFallbackIcon(),
+                                )
                               )
                             : _buildFallbackIcon(),
                       ),
