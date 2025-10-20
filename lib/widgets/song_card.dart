@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:swipetune/models/Track.dart';
-import '../homepage_songs/song.dart';
 import 'player_bar.dart';
 
 /// Modern glass-morphism song card with integrated music player

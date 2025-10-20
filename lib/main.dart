@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:swipetune/API/SongService.dart';
+import 'package:swipetune/services/SongService.dart';
 import 'package:swipetune/API/SpotifyApiClient.dart';
 import 'package:swipetune/providers/spotify_data_provider.dart';
 import 'package:swipetune/providers/user_provider.dart';
