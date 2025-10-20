@@ -11,7 +11,7 @@ class AuthServices {
 
   static final String clientId = 'deb60e6c420e48b789b7a205a25df95e';
   static final String redirectUri = 'swipetune://callback';
-  static final List<String> scopes = ['user-read-email','playlist-modify-public','playlist-modify-private','user-top-read'];
+  static final List<String> scopes = ['user-read-email','user-read-private','playlist-modify-public','playlist-modify-private','user-top-read','playlist-read-private'];
   
   static final PkceGenerator _pkce_gen = PkceGenerator();
   static final TokenStore _tokenStore = TokenStore();
@@ -182,12 +182,17 @@ class AuthServices {
     catch (e) 
     {
     print('❌ [AuthService] Login fehlgeschlagen: $e\n');
-    rethrow;  // ✅ Exception weitergeben an UI!
+    rethrow; 
     }
     finally
     {
       _dpl.dispose();
     }
+  }
+
+  static Future<void> logout() async
+  {
+    _tokenStore.clearTokens();
   }
 }
 

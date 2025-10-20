@@ -4,13 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:swipetune/API/SongService.dart';
 import 'package:swipetune/API/SpotifyApiClient.dart';
 import 'package:swipetune/providers/spotify_data_provider.dart';
-
+import 'package:swipetune/providers/user_provider.dart';
 import 'package:swipetune/screens/landing_screen.dart';
 import 'package:swipetune/screens/auth_page.dart';
 import 'package:swipetune/screens/library_screen.dart';
 import 'package:swipetune/screens/main_screen.dart'; 
 import 'package:swipetune/screens/onboarding_screen.dart';
 import 'package:swipetune/screens/settings_screen.dart';
+import 'package:swipetune/services/playlist_service.dart';
+import 'package:swipetune/services/user_service.dart';
 
 
 void main() {
@@ -18,15 +20,38 @@ void main() {
     MultiProvider(
       providers: [
         Provider(create: (_) => SpotifyApiClient()),
-        Provider(create: (context) => SongService(context.read())),
+        Provider(
+          create: (context) => SongService(
+            context.read<SpotifyApiClient>()
+          ),
+        ),
+        Provider(
+          create: (context) => PlaylistService(
+            context.read<SpotifyApiClient>()
+          )
+        ),
+        Provider(
+          create: (context) => UserService(
+            context.read<SpotifyApiClient>()
+          ),
+        ),
         ChangeNotifierProvider(
-          create: (context) => SpotifyDataProvider(context.read()),
+          create: (context) => SpotifyDataProvider(
+            context.read<SongService>(),
+            context.read<PlaylistService>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => UserProvider(
+            context.read<UserService>()
+          ),
         ),
       ],
       child: const SwipetuneApp(),
     ),
   );
 }
+
 
 class SwipetuneApp extends StatelessWidget {
   const SwipetuneApp({super.key});

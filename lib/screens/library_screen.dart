@@ -1,9 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:swipetune/models/Track.dart';
+import 'package:swipetune/services/playlist_service.dart';
 import '../widgets/library/library_back_button.dart';
 import '../widgets/library/playlist_item.dart';
 import '../widgets/library/song_item.dart';
+import 'package:provider/provider.dart';
+import '../providers/spotify_data_provider.dart';
+import '../models/playlist_model.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -13,7 +18,7 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProviderStateMixin {
-  _PlaylistData? _selectedPlaylist;
+  PlaylistModel? _selectedPlaylist;
   late AnimationController _morphController;
   final ScrollController _detailScrollController = ScrollController();
   double _scrollOffset = 0.0;
@@ -26,6 +31,9 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
       vsync: this,
     );
     _detailScrollController.addListener(_onDetailScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SpotifyDataProvider>().loadUserPlaylists();
+    });
   }
   
   void _onDetailScroll() {
@@ -41,12 +49,20 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     super.dispose();
   }
   
-  void _openPlaylist(_PlaylistData playlist) {
+  void _openPlaylist(PlaylistModel playlist) async {
     setState(() {
       _selectedPlaylist = playlist;
       _scrollOffset = 0.0;
     });
     _morphController.forward();
+    if(playlist.playlistTracks.isEmpty)
+    {
+      final playlistService = context.read<PlaylistService>();
+      final tracks = await playlistService.getPlaylistTracks(playlist.id);
+      setState(() {
+        playlist.playlistTracks.addAll(tracks);
+      });
+    }
   }
   
   void _closePlaylist() {
@@ -78,7 +94,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
 
   Widget _buildMainLibraryView(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final bottomPadding = MediaQuery.of(context).padding.bottom + 90; // Nav bar space
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 90;
     
     return CustomScrollView(
       slivers: [
@@ -119,11 +135,16 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final playlists = _getPlaylists();
+                if (playlists.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                }
                 final playlist = playlists[index];
                 return PlaylistItem(
                   name: playlist.name,
-                  songCount: playlist.songCount,
-                  icon: playlist.icon,
+                  songCount: '${playlist.trackCount} Tracks',
+                  icon: Icons.library_music,
                   onTap: () => _openPlaylist(playlist),
                 );
               },
@@ -190,7 +211,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildPlaylistDetailView(BuildContext context, _PlaylistData playlist) {
+  Widget _buildPlaylistDetailView(BuildContext context, PlaylistModel playlist) {
     final size = MediaQuery.of(context).size;
     final morphAnim = CurvedAnimation(
       parent: _morphController,
@@ -219,12 +240,11 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildDetailContent(BuildContext context, _PlaylistData playlist, double progress) {
+  Widget _buildDetailContent(BuildContext context, PlaylistModel playlist, double progress) {
     final size = MediaQuery.of(context).size;
-    final songs = _getSongsForPlaylist(playlist.name);
+    final songs = _selectedPlaylist!.playlistTracks;
     final bottomPadding = MediaQuery.of(context).padding.bottom + 90;
     
-    // Calculate collapse progress (0.0 = expanded, 1.0 = collapsed)
     final collapseProgress = (_scrollOffset / 150).clamp(0.0, 1.0);
     final expandedHeight = size.height * 0.35;
     final collapsedHeight = MediaQuery.of(context).padding.top + 60.0;
@@ -232,7 +252,6 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     return CustomScrollView(
       controller: _detailScrollController,
       slivers: [
-        // Collapsing Header with morphing animation
         SliverPersistentHeader(
           pinned: true,
           delegate: _PlaylistHeaderDelegate(
@@ -243,7 +262,6 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
             collapseProgress: collapseProgress,
           ),
         ),
-        // Song List
         SliverPadding(
           padding: EdgeInsets.only(
             left: size.width * 0.05,
@@ -255,10 +273,11 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
+                  final song = songs[index];
                   return SongItem(
-                    title: songs[index].title,
-                    artist: songs[index].artist,
-                    duration: songs[index].duration,
+                    title: song.name,
+                    artist: song.artist,
+                    duration: '',
                     index: index,
                     onTap: () {},
                   );
@@ -272,36 +291,23 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     );
   }
 
-  List<_PlaylistData> _getPlaylists() {
-    return [
-      _PlaylistData('Liked Songs', '247 songs', Icons.favorite),
-      _PlaylistData('Recently Played', '32 songs', Icons.history),
-      _PlaylistData('Chill Vibes', '45 songs', Icons.nights_stay),
-      _PlaylistData('Workout', '28 songs', Icons.fitness_center),
-      _PlaylistData('Focus', '67 songs', Icons.lightbulb_outline),
-      _PlaylistData('Party Mix', '54 songs', Icons.celebration),
-      _PlaylistData('Road Trip', '39 songs', Icons.directions_car),
-      _PlaylistData('Sleep', '21 songs', Icons.bedtime),
-    ];
+  String _formatDuration(int ms) {
+    final duration = Duration(milliseconds: ms);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
-  List<_SongData> _getSongsForPlaylist(String playlistName) {
-    return List.generate(
-      15,
-      (index) => _SongData(
-        title: 'Song Title ${index + 1}',
-        artist: 'Artist Name',
-        duration: '3:${(index % 6 + 10).toString().padLeft(2, '0')}',
-      ),
-    );
+  List<PlaylistModel> _getPlaylists() {
+    final provider = context.watch<SpotifyDataProvider>();
+    return provider.userPlaylists;
   }
 }
 
-// Custom SliverPersistentHeaderDelegate for collapsing header with morph effect
 class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
-  final _PlaylistData playlist;
+  final PlaylistModel playlist;
   final VoidCallback onBack;
   final double collapseProgress;
 
@@ -325,16 +331,13 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
     final safeTop = MediaQuery.of(context).padding.top;
     final progress = (shrinkOffset / (maxHeight - minHeight)).clamp(0.0, 1.0);
     
-    // Collapsed state: all in one line at back button height
-    final collapsedTop = safeTop + 16.0; // Same as back button
-    final backButtonWidth = size.width * 0.05 + 44.0; // Back button position + width
+    final collapsedTop = safeTop + 16.0;
+    final backButtonWidth = size.width * 0.05 + 44.0;
     
-    // Icon size: 120px expanded → 28px collapsed
     final iconSize = 120 - (92 * progress);
     
-    // Icon position: center when expanded → next to back button when collapsed
     final expandedIconLeft = (size.width - 120) / 2;
-    final collapsedIconLeft = backButtonWidth + 8.0; // Right of back button with gap
+    final collapsedIconLeft = backButtonWidth + 8.0;
     final iconLeft = expandedIconLeft + ((collapsedIconLeft - expandedIconLeft) * progress);
     
     final expandedIconTop = (maxHeight - minHeight) / 2;
@@ -359,14 +362,12 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
           child: Stack(
             children: [
-              // Back Button (always top-left)
               Positioned(
                 top: collapsedTop,
                 left: size.width * 0.05,
                 child: LibraryBackButton(onTap: onBack),
               ),
               
-              // Morphing Icon
               Positioned(
                 top: iconTop,
                 left: iconLeft,
@@ -387,7 +388,7 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                       ),
                     ),
                     child: Icon(
-                      playlist.icon,
+                      Icons.library_music,
                       color: Colors.white,
                       size: iconSize * 0.45,
                     ),
@@ -395,15 +396,14 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                 ),
               ),
               
-              // Title & Song Count in collapsed state (one line, right of icon)
               if (progress > 0.4)
                 Positioned(
-                  left: collapsedIconLeft + 36.0, // Right of collapsed icon
+                  left: collapsedIconLeft + 36.0,
                   right: size.width * 0.05,
                   top: collapsedTop,
-                  height: 44, // Same as back button height
+                  height: 44,
                   child: Opacity(
-                    opacity: (progress - 0.4) / 0.6, // Fade in during collapse
+                    opacity: (progress - 0.4) / 0.6,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,7 +419,7 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                           ),
                         ),
                         Text(
-                          playlist.songCount,
+                          '${playlist.trackCount} tracks',
                           style: GoogleFonts.manrope(
                             fontSize: 11,
                             color: Colors.white.withOpacity(0.6),
@@ -430,7 +430,6 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                   ),
                 ),
               
-              // Expanded Title (centered below icon when not collapsed)
               if (progress < 0.6)
                 Positioned(
                   left: size.width * 0.05,
@@ -451,7 +450,7 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          playlist.songCount,
+                          '${playlist.trackCount} tracks',
                           style: GoogleFonts.manrope(
                             fontSize: 14,
                             color: Colors.white.withOpacity(0.6),
@@ -472,20 +471,4 @@ class _PlaylistHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_PlaylistHeaderDelegate oldDelegate) {
     return oldDelegate.collapseProgress != collapseProgress;
   }
-}
-
-class _PlaylistData {
-  final String name;
-  final String songCount;
-  final IconData icon;
-
-  _PlaylistData(this.name, this.songCount, this.icon);
-}
-
-class _SongData {
-  final String title;
-  final String artist;
-  final String duration;
-
-  _SongData({required this.title, required this.artist, required this.duration});
 }

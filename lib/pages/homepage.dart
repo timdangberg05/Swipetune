@@ -28,8 +28,12 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
     
     // Lade Tracks vom Provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SpotifyDataProvider>().loadTracks();
-    });
+      final provider = context.read<SpotifyDataProvider>();
+      if(provider.tracks.isEmpty)
+      {
+        provider.loadDiscoveryTracks();
+      }
+    });;
   }
 
   @override
@@ -42,7 +46,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
   Widget build(BuildContext context) {
     return Consumer<SpotifyDataProvider>(
       builder: (context, provider, child) {
-        final track = provider.currenTrack;
+        final track = provider.currentTrack;
         
         return Scaffold(
           backgroundColor: Colors.transparent,
