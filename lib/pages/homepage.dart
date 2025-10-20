@@ -76,8 +76,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
   Widget build(BuildContext context) {
     return Consumer<SpotifyDataProvider>(
       builder: (context, provider, child) {
-        final track = provider.currentTrack;
-        
+        final track = provider.currentTrack;      
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: SafeArea(
