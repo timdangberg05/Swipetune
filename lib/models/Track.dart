@@ -8,9 +8,10 @@ class Track{
   final String albumImageUrl;
   final int popularity;
   final String? previewUrl;
+  final int durationMs;
 
 
-  Track({required this.id, required this.name, required this.artist, required this.albumImageUrl, required this.popularity, required this.previewUrl});
+  Track({required this.id, required this.name, required this.artist, required this.albumImageUrl, required this.popularity, required this.previewUrl,required this.durationMs});
 
 
 
@@ -21,6 +22,7 @@ class Track{
       artist = map['artists'][0]['name'],
       albumImageUrl = map['album']['images'][0]['url'],
       popularity = map['popularity'],
-      previewUrl = map['preview_url'];
+      previewUrl = map['preview_url'],
+      durationMs = map['duration_ms'];
   
 }

@@ -53,14 +53,14 @@ class SongService{
 
   Future<List<Track>> searchWithQuery(QueryStateModel query) async
   {
-    final queryResponse = await _apiClient.get('/search?q=${query.query}&type=track&limit=20&offset=${query.offset}&market=DE');
+    final queryResponse = await _apiClient.get('/search?q=${query.query}&type=track&limit=20&offset=${query.offset}&market=US');
     final tracks = (queryResponse['tracks']['items'] as List).map((item) => Track.fromMap(item)).toList();
     query.incrementOffset();
     return tracks;
   }
   Future<List> getNewReleaseAlbumIds() async
   {
-    Map<String, dynamic> albumRelaseMap = await _apiClient.get('/browse/new-releases?limit=10&market=DE');
+    Map<String, dynamic> albumRelaseMap = await _apiClient.get('/browse/new-releases?limit=10&market=US');
     List<dynamic> albums = albumRelaseMap['albums']['items'];
     return albums.map((item) => item['id'] as String).toList();
   }
