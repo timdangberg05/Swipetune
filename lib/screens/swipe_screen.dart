@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:provider/provider.dart';
-import 'package:swipetune/pages/songdetails.dart';
+import 'package:swipetune/screens/songdetails.dart';
 import '../providers/spotify_data_provider.dart';
 import '../widgets/song_card.dart';
 import '../widgets/stacked_card.dart';

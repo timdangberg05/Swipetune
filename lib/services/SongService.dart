@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:swipetune/models/query_state_model.dart';
 
-import './SpotifyApiClient.dart';
+import '../API/SpotifyApiClient.dart';
 import '../models/Track.dart';
 
 class SongService{

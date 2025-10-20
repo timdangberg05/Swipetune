@@ -1,5 +1,5 @@
 import 'package:just_audio/just_audio.dart';
-import 'package:swipetune/API/SongService.dart';
+import 'package:swipetune/services/SongService.dart';
 import 'package:swipetune/models/Track.dart';
 
 
