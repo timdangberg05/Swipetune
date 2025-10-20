@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:swipetune/models/Track.dart';
 import '/widgets/liquid_background.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class SongDetailPage extends StatefulWidget {
   final Track track;
@@ -49,11 +48,40 @@ class _SongDetailPageState extends State<SongDetailPage>
     super.dispose();
   }
 
-  Future<void> _launchPreviewUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  String _formatDuration(int milliseconds) {
+    final totalSeconds = (milliseconds / 1000).round();
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.white, size: 20),
+        const SizedBox(width: 10),
+        Text(
+          "$label:",
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 16,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -65,7 +93,7 @@ class _SongDetailPageState extends State<SongDetailPage>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          /// Animated liquid crystal background
+          // Liquid Crystal Background
           Positioned.fill(
             child: LiquidGlassBackground(
               time: _timeController,
@@ -75,15 +103,13 @@ class _SongDetailPageState extends State<SongDetailPage>
             ),
           ),
 
-          /// Subtle overlay for readability
           Container(color: Colors.black.withOpacity(0.25)),
 
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              physics: const BouncingScrollPhysics(),
               child: Column(
                 children: [
-                  /// Back button
                   Align(
                     alignment: Alignment.topLeft,
                     child: IconButton(
@@ -93,23 +119,23 @@ class _SongDetailPageState extends State<SongDetailPage>
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
 
-                  /// Central glowing container
+                  // 🔹 Container für alle Infos inkl. Cover
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 25),
+                    margin: const EdgeInsets.symmetric(horizontal: 25),
+                    padding: const EdgeInsets.all(25),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(25),
                       border: Border.all(
-                          color: Colors.cyanAccent.withOpacity(0.25),
-                          width: 1.2),
+                        color: Colors.white.withOpacity(0.8),
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.cyanAccent.withOpacity(0.2),
-                          blurRadius: 30,
+                          color: Colors.blueAccent.withOpacity(0.2),
+                          blurRadius: 15,
                           spreadRadius: 2,
                         ),
                       ],
@@ -117,15 +143,15 @@ class _SongDetailPageState extends State<SongDetailPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        /// Album cover
+                        // Album Cover
                         Container(
                           width: screenWidth * 0.65,
                           height: screenWidth * 0.65,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.cyanAccent.withOpacity(0.4),
+                                color: Colors.blueAccent.withOpacity(0.3),
                                 blurRadius: 25,
                                 spreadRadius: 2,
                               )
@@ -136,138 +162,53 @@ class _SongDetailPageState extends State<SongDetailPage>
                             ),
                           ),
                         ),
+                        const SizedBox(height: 28),
 
-                        const SizedBox(height: 30),
-
-                        /// Song title
+                        // Trackname & Artist
                         Text(
                           track.name,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
-
                         const SizedBox(height: 10),
-
-                        /// Artist name
                         Text(
                           track.artist,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.85),
-                            fontSize: 19,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 18,
                           ),
+                          textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 28),
 
-                        const SizedBox(height: 25),
-
-                        /// Album info below cover
+                        // Infos
+                        _buildInfoRow(Icons.album, "Album", track.albumName),
+                        const SizedBox(height: 14),
                         _buildInfoRow(
-                          Icons.album,
-                          "Album",
-                          track.albumName,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildInfoRow(
-                          Icons.calendar_today,
-                          "Release Date",
-                          track.releaseDate,
-                        ),
-
-                        const SizedBox(height: 25),
-
-                        /// Popularity & preview info
-                        _buildInfoRow(Icons.star, "Popularity",
-                            "${track.popularity} / 100"),
-                        const SizedBox(height: 12),
-                        _buildInfoRow(
-                          Icons.music_note,
-                          "Preview",
-                          track.previewUrl != null
-                              ? "Tap play to preview"
-                              : "No preview available",
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        /// Play preview button (if available)
-                        if (track.previewUrl != null)
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Colors.cyanAccent.withOpacity(0.2),
-                              side: BorderSide(
-                                  color: Colors.cyanAccent.withOpacity(0.5),
-                                  width: 1),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 32, vertical: 14),
-                            ),
-                            onPressed: () {
-                              _launchPreviewUrl(track.previewUrl!);
-                            },
-                            icon: const Icon(Icons.play_arrow,
-                                color: Colors.white),
-                            label: const Text(
-                              "Play Preview",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.1,
-                                fontSize: 17,
-                              ),
-                            ),
-                          ),
+                            Icons.calendar_today, "Release", track.releaseDate),
+                        const SizedBox(height: 14),
+                        _buildInfoRow(Icons.schedule, "Duration",
+                            _formatDuration(track.durationMs)),
+                        const SizedBox(height: 14),
+                        _buildInfoRow(Icons.trending_up, "Popularity",
+                            "${track.popularity}/100"),
+                        const SizedBox(height: 14),
+                        _buildInfoRow(Icons.audiotrack, "Preview",
+                            track.previewUrl != null ? "Available" : "Not available"),
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String title, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.75),
-                  fontSize: 15,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

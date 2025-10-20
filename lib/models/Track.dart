@@ -10,7 +10,7 @@ class Track{
   final int durationMs;
   final String albumName;
   final String releaseDate;
-
+  final int duration;
 
   Track(
     {required this.id, 
@@ -22,6 +22,7 @@ class Track{
     required this.durationMs,
     required this.albumName,
     required this.releaseDate,
+    required this.duration,
     });
 
 
@@ -36,6 +37,6 @@ class Track{
       previewUrl = map['preview_url'],
       durationMs = map['duration_ms'],
       albumName = map['album']['name'],
-      releaseDate = map['album']['release_date'];
-  
+      releaseDate = map['album']['release_date'],
+      duration = map['duration_ms'];
 }
