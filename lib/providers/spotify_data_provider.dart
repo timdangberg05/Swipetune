@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:swipetune/models/playlist_model.dart';
 import 'package:swipetune/services/playlist_service.dart';
-import '../services/SongService.dart';
+import '../API/SongService.dart';
 import '../models/Track.dart';
 
 class SpotifyDataProvider extends ChangeNotifier {
