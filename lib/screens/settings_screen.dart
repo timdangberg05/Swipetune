@@ -18,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStateMixin {
   int _selectedTabIndex = 0;
+  late PageController _pageController;
 
   Future<void> _handleLogout() async {
   try {
@@ -44,14 +45,29 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
+    _pageController.addListener(() {
+      setState(() {
+        _selectedTabIndex = _pageController.page?.round() ?? 0;
+      });
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserProvider>().loadUserProfile();
     });
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   void _onTabSelected(int index) {
-    if (_selectedTabIndex == index) return;
-    setState(() => _selectedTabIndex = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutQuart,
+    );
   }
 
     int get totalSwipes {
@@ -101,7 +117,19 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
               const SizedBox(height: 24),
               
               // Tab Content
-              _buildTabContent(),
+              SizedBox(
+                height: 800, // Adjusted height to prevent bottom overflows
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(), // Disable swipe, use only button taps
+                  children: [
+                    _buildRecentTab(),
+                    _buildFollowingTab(),
+                    _buildPlaylistsTab(),
+                    _buildSettingsTab(),
+                  ],
+                ),
+              ),
             ],
           ),
         );
