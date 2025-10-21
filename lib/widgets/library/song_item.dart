@@ -26,83 +26,46 @@ class SongItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final bottomPadding = size.height * 0.01;
+    final horizontalPadding = size.width * 0.04;
+    final verticalPadding = size.height * 0.012;
+    final imageSpacing = size.width * 0.03;
     
     return Padding(
-      padding: EdgeInsets.only(bottom: size.height * 0.01),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
+      padding: EdgeInsets.only(bottom: bottomPadding),
+      child: RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0x0DFFFFFF),
                 borderRadius: BorderRadius.circular(14),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: size.width * 0.04,
-                    vertical: size.height * 0.012,
-                  ),
-                  child: Row(
-                    children: [
-                      track.albumImageUrl.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: CachedNetworkImage(
-                                imageUrl: track.albumImageUrl,
-                                width: 42,
-                                height: 42,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => Container(
-                                  color: Colors.white.withOpacity(0.1),
-                                ),
-                                errorWidget: (context, url, error) => Icon(Icons.music_note),
-                              )
-
-                            )
-                          : _buildIndexBox(),
-                      SizedBox(width: size.width * 0.03),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              track.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.manrope(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              track.artist,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.manrope(
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.5),
-                              ),
-                            ),
-                          ],
+                border: Border.all(
+                  color: const Color(0x14FFFFFF),
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                      vertical: verticalPadding,
+                    ),
+                    child: Row(
+                      children: [
+                        _buildTrackImage(),
+                        SizedBox(width: imageSpacing),
+                        Expanded(
+                          child: _buildTrackInfo(),
                         ),
-                      ),
-                      Text(
-                        _formatDuration(track.durationMs),
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.4),
-                        ),
-                      ),
-                    ],
+                        _buildDuration(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -113,18 +76,108 @@ class SongItem extends StatelessWidget {
     );
   }
 
+  Widget _buildTrackImage() {
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: track.albumImageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: track.albumImageUrl,
+                width: 42,
+                height: 42,
+                fit: BoxFit.cover,
+                memCacheWidth: 84,
+                memCacheHeight: 84,
+                placeholder: (_, __) => _buildPlaceholder(),
+                errorWidget: (_, __, ___) => _buildMusicNotePlaceholder(),
+              )
+            : _buildIndexBox(),
+      ),
+    );
+  }
+
+  Widget _buildTrackInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          track.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          track.artist,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.manrope(
+            fontSize: 12,
+            color: const Color(0x80FFFFFF),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDuration() {
+    return Text(
+      _formatDuration(track.durationMs),
+      style: GoogleFonts.manrope(
+        fontSize: 12,
+        color: const Color(0x66FFFFFF),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 42,
+      height: 42,
+      color: const Color(0x1AFFFFFF),
+    );
+  }
+
+  Widget _buildMusicNotePlaceholder() {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0x1FFFFFFF),
+            Color(0x0AFFFFFF),
+          ],
+        ),
+      ),
+      child: const Icon(
+        Icons.music_note,
+        color: Color(0xB3FFFFFF),
+        size: 20,
+      ),
+    );
+  }
+
   Widget _buildIndexBox() {
     return Container(
       width: 42,
       height: 42,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.12),
-            Colors.white.withOpacity(0.04),
+            Color(0x1FFFFFFF),
+            Color(0x0AFFFFFF),
           ],
         ),
       ),
@@ -134,7 +187,7 @@ class SongItem extends StatelessWidget {
           style: GoogleFonts.manrope(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: Colors.white.withOpacity(0.7),
+            color: const Color(0xB3FFFFFF),
           ),
         ),
       ),
