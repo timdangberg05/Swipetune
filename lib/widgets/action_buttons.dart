@@ -3,8 +3,69 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/auth_services.dart';
 
-// Spotify-Button mit Liquid-Glass-Effekt
+// Der bestehende ActionButton
+class ActionButton extends StatefulWidget {
+  final Color accentColor;
+  final Color? textColor;
+  final String text;
+  final VoidCallback onTap;
+
+  const ActionButton({super.key, required this.accentColor, required this.onTap, required this.text, this.textColor});
+
+  @override
+  _ActionButtonState createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<ActionButton> {
+  bool _isPressed = false;
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: Container(
+          height: 56,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: widget.accentColor,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: widget.accentColor.withOpacity(0.5),
+                blurRadius: 25,
+                offset: const Offset(0, 10),
+              )
+            ],
+          ),
+          child: Center(
+            child: Text(
+              widget.text,
+              style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: widget.textColor ?? Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+// NEU: Der Spotify-Button mit Liquid-Glass-Effekt
 class SpotifyButton extends StatefulWidget {
   final VoidCallback onTap;
   const SpotifyButton({super.key, required this.onTap});
