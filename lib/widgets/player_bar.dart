@@ -8,12 +8,16 @@ class LiquidMusicPlayer extends StatelessWidget {
   final Track track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
+  final double titleOffset; // Slide-Offset für Titel
+  final double controlsFade; // Fade für PlayButton & Progress
 
   const LiquidMusicPlayer({
     super.key,
     required this.track,
     required this.isPlaying,
-    required this.onPlayPause, 
+    required this.onPlayPause,
+    this.titleOffset = 0,
+    this.controlsFade = 1.0,
   });
 
   @override
@@ -21,39 +25,66 @@ class LiquidMusicPlayer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Song title and artist
-          Text(
-            track.name,
-            style: GoogleFonts.manrope(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
+          // Slide-Animation für Track Name & Artist
+          Transform.translate(
+            offset: Offset(0, titleOffset),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Track Name mit Shadow
+                Text(
+                  track.name,
+                  style: GoogleFonts.manrope(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.6),
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                // Artist Name mit Shadow
+                Text(
+                  track.artist,
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.6),
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
-          Text(
-            track.artist,
-            style: GoogleFonts.manrope(
-              fontSize: 16,
-              color: Colors.white70,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const Spacer(),
 
-          // Player controls and progress bar
-          Row(
-            children: [
-              _buildPlayPauseButton(),
-              const SizedBox(width: 16),
-              Expanded(child: _buildProgressBar()),
-            ],
+          // Player Controls & Progress (fade-out)
+          Opacity(
+            opacity: controlsFade,
+            child: Row(
+              children: [
+                _buildPlayPauseButton(),
+                const SizedBox(width: 16),
+                Expanded(child: _buildProgressBar()),
+              ],
+            ),
           ),
         ],
       ),
