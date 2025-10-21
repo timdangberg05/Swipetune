@@ -10,7 +10,9 @@ import '../providers/user_provider.dart';
 
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final ScrollController? scrollController;
+
+  const SettingsScreen({super.key, this.scrollController});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -89,6 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
         final user = userProvider.user;
         
         return SingleChildScrollView(
+          controller: widget.scrollController,
           padding: EdgeInsets.only(
             left: 24.0,
             right: 24.0,

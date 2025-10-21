@@ -2,17 +2,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'swipe_screen.dart';
 import '../widgets/liquid_nav_bar.dart';
+import '../widgets/header_scroll_handler.dart';
 import 'library_screen.dart';
 import 'settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final AnimationController transitionController;
   final ValueNotifier<int> currentPageNotifier;
+  final ScrollController? sharedScrollController;
 
   const MainScreen({
     super.key,
     required this.transitionController,
     required this.currentPageNotifier,
+    this.sharedScrollController,
   });
 
   @override
@@ -21,6 +24,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final PageController _pageController = PageController();
+  final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
   bool _isAnimatingToPage = false;
   int? _targetPage;
@@ -34,6 +38,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _scrollController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -98,15 +103,24 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          PageView(
+          PageView.builder(
             controller: _pageController,
             onPageChanged: _onPageSwiped,
-            children: const [
-              SwipeHomePage(),
-              LibraryScreen(),
-              Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))),
-              SettingsScreen(),
-            ],
+            itemCount: 4,
+            itemBuilder: (context, index) {
+              switch (index) {
+                case 0:
+                  return const SwipeHomePage();
+                case 1:
+                  return LibraryScreen(scrollController: widget.sharedScrollController ?? _scrollController);
+                case 2:
+                  return const Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)));
+                case 3:
+                  return SettingsScreen(scrollController: widget.sharedScrollController ?? _scrollController);
+                default:
+                  return const SizedBox();
+              }
+            },
           ),
           Align(
             alignment: Alignment.bottomCenter,
