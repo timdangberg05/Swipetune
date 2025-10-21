@@ -8,16 +8,16 @@ class LiquidMusicPlayer extends StatelessWidget {
   final Track track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
-  final double titleOffset; // Offset für Slide-Animation
-  final double controlsFade; // NEU: Fade für Controls
+  final double titleOffset; // Slide-Offset für Titel
+  final double controlsFade; // Fade für PlayButton & Progress
 
   const LiquidMusicPlayer({
     super.key,
     required this.track,
     required this.isPlaying,
     required this.onPlayPause,
-    this.titleOffset = 0.0,
-    this.controlsFade = 1.0, // NEU: Default = sichtbar
+    this.titleOffset = 0,
+    this.controlsFade = 1.0,
   });
 
   @override
@@ -28,41 +28,56 @@ class LiquidMusicPlayer extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Slide-Animation für Songtitel & Artist (KEIN Fade!)
+          // Slide-Animation für Track Name & Artist
           Transform.translate(
             offset: Offset(0, titleOffset),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Track Name mit Shadow
                 Text(
                   track.name,
                   style: GoogleFonts.manrope(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.6),
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
+                // Artist Name mit Shadow
                 Text(
                   track.artist,
                   style: GoogleFonts.manrope(
                     fontSize: 16,
                     color: Colors.white70,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.6),
+                        offset: const Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
-
-          // Player controls mit Fade-Out
+          // Player Controls & Progress (fade-out)
           Opacity(
-            opacity: controlsFade, // 🔹 Nur Controls faden
+            opacity: controlsFade,
             child: Row(
               children: [
                 _buildPlayPauseButton(),
@@ -116,7 +131,7 @@ class LiquidMusicPlayer extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
-        width: isPlaying ? 120 : 0,
+        width: isPlaying ? 120 : 0, // Simulates progress
         height: 8,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(4),

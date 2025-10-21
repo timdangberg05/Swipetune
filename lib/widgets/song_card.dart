@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:swipetune/models/Track.dart';
 import 'player_bar.dart';
 
@@ -30,6 +31,7 @@ class _GlassSongCardState extends State<GlassSongCard>
   late final Animation<double> _titleSlideAnim;
   late final Animation<double> _downShiftAnim;
   late final Animation<double> _infoFadeAnim;
+  late final Animation<double> _detailsSlideAnim;
 
   @override
   void initState() {
@@ -87,6 +89,14 @@ class _GlassSongCardState extends State<GlassSongCard>
         curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
       ),
     );
+
+    _detailsSlideAnim = Tween<double>(begin: 50, end: -20).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.25, 0.7, curve: Curves.easeOut),
+      ),
+    );
+
   }
 
   void _toggleExpand() {
@@ -133,7 +143,7 @@ class _GlassSongCardState extends State<GlassSongCard>
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeInOut,
                 width: collapsedWidth * (_isExpanded ? 1.05 : 1.0),
-                height: collapsedHeight * (_isExpanded ? 1.10 : 1.0),
+                height: collapsedHeight * (_isExpanded ? 1.08 : 1.0),
                 margin: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(32),
@@ -186,15 +196,27 @@ class _GlassSongCardState extends State<GlassSongCard>
                       // Dunkler Verlauf unten
                       Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.85)
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: const [0.45, 1.0],
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.4), // Weißer, halbtransparenter Rand
+                            width: 3, // Dicke des Rands
                           ),
+                          // gradient: LinearGradient(
+                          //   colors: [
+                          //     Colors.white.withOpacity(0.08),
+                          //     Colors.white.withOpacity(0.05),
+                          //   ],
+                          //   begin: Alignment.topLeft,
+                          //   end: Alignment.bottomRight,
+                          // ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.2),
+                              blurRadius: 30, // für leichtes Leuchten
+                              spreadRadius: 1,
+                              offset: const Offset(0, 0),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -218,20 +240,23 @@ class _GlassSongCardState extends State<GlassSongCard>
                         left: 25,
                         right: 25,
                         child: IgnorePointer(
-                          ignoring: !_isExpanded, 
-                          child: Opacity(
-                            opacity: _infoFadeAnim.value,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildInfoRow(Icons.album, "Album", widget.track.albumName),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(Icons.calendar_today, "Release", widget.track.releaseDate),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(Icons.trending_up, "Popularity", "${widget.track.popularity}/100"),
-                                const SizedBox(height: 8),
-                                _buildInfoRow(Icons.audiotrack, "Preview", widget.track.previewUrl != null ? "Available" : "Not available"),
-                              ],
+                          ignoring: !_isExpanded,
+                          child: Transform.translate(
+                            offset: Offset(0, _detailsSlideAnim.value),
+                            child: Opacity(
+                              opacity: _infoFadeAnim.value,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow(Icons.album, "Album", widget.track.albumName),
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(Icons.calendar_today, "Release", widget.track.releaseDate),
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(Icons.trending_up, "Popularity", "${widget.track.popularity}/100"),
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(Icons.audiotrack, "Preview", widget.track.previewUrl != null ? "Available" : "Not available"),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -259,24 +284,33 @@ class _GlassSongCardState extends State<GlassSongCard>
       );
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: Colors.white, size: 18),
-        const SizedBox(width: 8),
-        Text(
-          "$label:",
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, color: Colors.white, size: 18),
+      const SizedBox(width: 8),
+      Text(
+        "$label:",
+        style: GoogleFonts.manrope(
+          color: Colors.white,           // Weiß, gut sichtbar
+          fontWeight: FontWeight.w700,   // gleiche Gewichtung wie im Player
+          fontSize: 16,                  // gleiche Größe wie im Player für Subtext
         ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 16),
-            overflow: TextOverflow.ellipsis,
+      ),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          value,
+          style: GoogleFonts.manrope(
+            color: Colors.white,         // Weiß, klar sichtbar
+            fontWeight: FontWeight.w600, // etwas leichter als Label
+            fontSize: 16,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
 }
