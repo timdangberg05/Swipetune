@@ -18,11 +18,12 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> with TickerProviderStateMixin {
   late AnimationController _timeController, _transitionController, _colorTransitionController, _spotifyAuthController, _authPageController, _backgroundMorphController, _homeController;
   AppState _appState = AppState.welcome;
-  
+
   // ZENTRALE STATE-VERWALTUNG um den teilt dem LogoChoreographer mit, welche Seite aktiv ist
   // und ermöglicht so stabile Header-Animationen.
   final ValueNotifier<int> _currentPageNotifier = ValueNotifier(0);
   final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
+  final ScrollController _sharedScrollController = ScrollController();
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     // Die Notifier von 'incoming' werden korrekt disposed.
     _spotifyLogoCenterNotifier.dispose();
     _currentPageNotifier.dispose();
+    _sharedScrollController.dispose();
     super.dispose();
   }
 
@@ -125,6 +127,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
             homeController: _homeController,
             currentPageNotifier: _currentPageNotifier, // HIER WIRD DER STATE ÜBERGEBEN
             onCancelSpotify: () => _toggleSpotifyFlow(false),
+            scrollController: _sharedScrollController,
           ),
 
           // Der eigentliche UI-Inhalt
@@ -156,7 +159,8 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
         // Der MainScreen erhält den Notifier, um ihn bei Seitenwechsel zu aktualisieren.
         return MainScreen(
           transitionController: _homeController,
-          currentPageNotifier: _currentPageNotifier, // HIER WIRD DER STATE ÜBERGEBEN
+          currentPageNotifier: _currentPageNotifier,
+          sharedScrollController: _sharedScrollController,
         );
       case AppState.welcome:
       default:

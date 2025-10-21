@@ -7,7 +7,7 @@ import '../models/Track.dart';
 
 class SongService{
 
-  SpotifyApiClient _apiClient;
+  final SpotifyApiClient _apiClient;
   
 
   SongService(this._apiClient);

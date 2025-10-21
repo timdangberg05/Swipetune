@@ -12,7 +12,9 @@ import '../providers/spotify_data_provider.dart';
 import '../models/playlist_model.dart';
 
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  final ScrollController? scrollController;
+
+  const LibraryScreen({super.key, this.scrollController});
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -101,6 +103,7 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     final horizontalPadding = size.width * 0.05;
     
     return CustomScrollView(
+      controller: widget.scrollController,
       slivers: [
         SliverPadding(
           padding: EdgeInsets.only(
