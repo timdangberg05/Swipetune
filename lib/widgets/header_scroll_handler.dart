@@ -54,6 +54,9 @@ class _HeaderScrollHandlerState extends State<HeaderScrollHandler> {
 
   @override
   Widget build(BuildContext context) {
+    // Hide for settings page (index 3) since it has its own header
+    if (widget.currentPageNotifier.value == 3) return const SizedBox();
+
     final safeAreaTop = MediaQuery.of(context).padding.top;
     final title = pageTitles[widget.currentPageNotifier.value] ?? "SwipeTune";
     final progress = 1.0 - ((_currentHeight - minHeight) / (maxHeight - minHeight)).clamp(0.0, 1.0);
