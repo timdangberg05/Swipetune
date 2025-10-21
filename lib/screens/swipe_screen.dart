@@ -14,6 +14,7 @@ class SwipeHomePage extends StatefulWidget {
 }
 
 class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateMixin {
+  
   bool _isPlaying = false;
   Offset _dragOffset = Offset.zero;
 
