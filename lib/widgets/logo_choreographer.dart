@@ -130,20 +130,13 @@ class LogoChoreographer extends StatelessWidget {
   }
 
 
- Widget _buildMorphingHomeHeader(double size, int currentPage) {
-
-    const pageTitles = {
-      0: "SwipeTune",
-
-      1: "Your Library", 
-      2: "Likes Page",  
-      3: "Settings"
-    };
+  Widget _buildMorphingHomeHeader(double size, int currentPage) {
+    const pageTitles = {1: "Likes", 2: "Settings"};
     final title = pageTitles[currentPage];
 
     // Stable container with proper padding to prevent clipping
     return Container(
-      height: size + 8, // Extra padding to prevent text clipping
+      height: size + 8, // Extra padding to prevent text clipping at bottom
       padding: const EdgeInsets.only(bottom: 4), // Prevents bottom clipping
       child: Stack(
         children: [
@@ -160,25 +153,55 @@ class LogoChoreographer extends StatelessWidget {
             bottom: 0,
             right: 24.0,
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300), // Reduzierte Dauer für schnappschüssigkeit
-              switchInCurve: Curves.easeInOutCubic,
-              switchOutCurve: Curves.easeInOutCubic,
-              transitionBuilder: (child, animation) {
-                // Vereinfachte Morphing-Animation: Slide und Fade
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.1, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
-                  ),
+              duration: const Duration(milliseconds: 600),
+              switchInCurve: Curves.easeInOutCubicEmphasized,
+              switchOutCurve: Curves.easeInOutCubicEmphasized,
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
                 );
+              },
+              transitionBuilder: (child, animation) {
+                // Smoother, more refined animation curves
+                final smoothCurve = CurveTween(curve: Curves.easeInOutCubicEmphasized);
+                final curvedAnimation = animation.drive(smoothCurve);
+                
+                // Determine if this is entering or exiting
+                final isEntering = child.key == ValueKey(title);
+                
+                if (isEntering) {
+                  // Entering: slide from right with fade
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.15, 0),
+                      end: Offset.zero,
+                    ).animate(curvedAnimation),
+                    child: FadeTransition(
+                      opacity: curvedAnimation,
+                      child: child,
+                    ),
+                  );
+                } else {
+                  // Exiting: slide to left with fade
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset.zero,
+                      end: const Offset(-0.15, 0),
+                    ).animate(curvedAnimation),
+                    child: FadeTransition(
+                      opacity: Tween<double>(begin: 1.0, end: 0.0).animate(curvedAnimation),
+                      child: child,
+                    ),
+                  );
+                }
               },
               child: title != null
                   ? Align(
-                      key: ValueKey(title), // Eindeutiger Key pro Titel
+                      key: ValueKey(title),
                       alignment: Alignment.centerLeft,
                       child: Text(
                         title,
