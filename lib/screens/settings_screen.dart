@@ -7,6 +7,8 @@ import 'package:swipetune/providers/spotify_data_provider.dart';
 import 'package:swipetune/screens/landing_screen.dart';
 import 'package:swipetune/services/auth_services.dart';
 import '../providers/user_provider.dart';
+import '../models/Track.dart';
+import 'songdetails.dart';
 
 
 class SettingsScreen extends StatefulWidget {
@@ -17,6 +19,14 @@ class SettingsScreen extends StatefulWidget {
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class StatItem {
+  final String label;
+  final String value;
+  final Color color;
+
+  StatItem({required this.label, required this.value, required this.color});
 }
 
 class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStateMixin {
@@ -348,27 +358,76 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   }
 
   Widget _buildRecentTab(Size screenSize) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('Recent Swipes', onViewAll: () {}),
-        SizedBox(height: screenSize.height * 0.02),
-        SizedBox(
-          height: screenSize.height * 0.25,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              return _buildSwipeCard(
-                isLike: index % 2 == 0,
-                songName: 'Song Name',
-                artistName: 'Artist',
-                timeAgo: '${index + 1}h ago',
-              );
-            },
-          ),
-        ),
-      ],
+    return Consumer<SpotifyDataProvider>(
+      builder: (context, dataProvider, child) {
+        // Combine liked and disliked tracks, take last 6 for recent
+        final List<Map<String, dynamic>> recentSwipes = [];
+        final liked = dataProvider.likedTracks.reversed.take(3).map((t) => {'track': t, 'isLike': true});
+        final disliked = dataProvider.dislikedTracks.reversed.take(3).map((t) => {'track': t, 'isLike': false});
+        recentSwipes.addAll(liked);
+        recentSwipes.addAll(disliked);
+        recentSwipes.shuffle(); // Randomize order for variety
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Recent Swipes Section
+            _buildSectionHeader('Recent Activity', onViewAll: recentSwipes.isNotEmpty ? () {} : null),
+            SizedBox(height: screenSize.height * 0.015),
+            if (recentSwipes.isNotEmpty)
+              SizedBox(
+                height: screenSize.height * 0.25,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: recentSwipes.length,
+                  itemBuilder: (context, index) {
+                    final swipe = recentSwipes[index];
+                    final track = swipe['track'] as Track;
+                    final isLike = swipe['isLike'] as bool;
+                    return Padding(
+                      padding: EdgeInsets.only(right: screenSize.width * 0.03),
+                      child: _buildUltraModernSwipeCard(
+                        isLike: isLike,
+                        track: track,
+                        screenSize: screenSize,
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Container(
+                height: screenSize.height * 0.15,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.swipe_outlined,
+                      color: Colors.white.withOpacity(0.4),
+                      size: screenSize.width * 0.12,
+                    ),
+                    SizedBox(height: screenSize.height * 0.01),
+                    Text(
+                      'No recent swipes yet',
+                      style: GoogleFonts.manrope(
+                        fontSize: screenSize.width * 0.04,
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                    Text(
+                      'Start swiping to see activity',
+                      style: GoogleFonts.manrope(
+                        fontSize: screenSize.width * 0.03,
+                        color: Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -690,6 +749,88 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     );
   }
 
+  Widget _buildArtistMorphCard(String artistName, Size screenSize) {
+    return Transform.scale(
+      scale: 0.85, // Slightly smaller for morph effect
+      child: Container(
+        width: 110,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 15,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 65,
+                    height: 65,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.2),
+                          Colors.white.withOpacity(0.1),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(Icons.music_note, color: Colors.white38, size: 30.0),
+                  ),
+                  SizedBox(height: screenSize.height * 0.01),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      artistName,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlaylistCard(String name, String trackCount) {
     return Container(
       width: 140,
@@ -872,6 +1013,545 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
         ),
       ),
     )
+    );
+  }
+
+  Widget _buildGlassStatsCard({
+    required String title,
+    required String subtitle,
+    required List<StatItem> stats,
+    required Size screenSize,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: EdgeInsets.all(screenSize.width * 0.05),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.manrope(
+                  fontSize: screenSize.width * 0.045,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: screenSize.height * 0.005),
+              Text(
+                subtitle,
+                style: GoogleFonts.manrope(
+                  fontSize: screenSize.width * 0.035,
+                  color: Colors.white.withOpacity(0.7),
+                ),
+              ),
+              SizedBox(height: screenSize.height * 0.02),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: stats.map((stat) => _buildStatCircle(stat, screenSize)).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCircle(StatItem stat, Size screenSize) {
+    return Container(
+      width: screenSize.width * 0.15,
+      height: screenSize.width * 0.15,
+      decoration: BoxDecoration(
+        color: stat.color.withOpacity(0.1),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: stat.color.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            stat.value,
+            style: GoogleFonts.manrope(
+              fontSize: screenSize.width * 0.035,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            stat.label,
+            style: GoogleFonts.manrope(
+              fontSize: screenSize.width * 0.025,
+              color: Colors.white.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernSwipeCard({
+    required bool? isLike,
+    required String songName,
+    required String artistName,
+    required String timeAgo,
+    required Size screenSize,
+  }) {
+    Color statusColor;
+    String statusEmoji;
+    String statusText;
+
+    if (isLike == true) {
+      statusColor = const Color(0xFF1DB954);
+      statusEmoji = '💚';
+      statusText = 'LIKE';
+    } else if (isLike == false) {
+      statusColor = const Color(0xFFFF5A5A);
+      statusEmoji = '💔';
+      statusText = 'DISLIKE';
+    } else {
+      statusColor = Colors.blue;
+      statusEmoji = '🎵';
+      statusText = 'PLAYED';
+    }
+
+    return Container(
+      width: screenSize.width * 0.35,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: statusColor.withOpacity(0.2),
+                width: 2,
+              ),
+            ),
+            child: Column(
+              children: [
+                // Status Header
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenSize.width * 0.03,
+                    vertical: screenSize.height * 0.008,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '$statusEmoji $statusText',
+                        style: GoogleFonts.manrope(
+                          fontSize: screenSize.width * 0.03,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Album Art
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.all(screenSize.width * 0.025),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        isLike == true ? Icons.thumb_up :
+                        isLike == false ? Icons.thumb_down :
+                        Icons.play_circle_filled,
+                        color: Colors.white.withOpacity(0.6),
+                        size: screenSize.width * 0.08,
+                      ),
+                    ),
+                  ),
+                ),
+                // Song Info
+                Padding(
+                  padding: EdgeInsets.all(screenSize.width * 0.025),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        songName,
+                        style: GoogleFonts.manrope(
+                          fontSize: screenSize.width * 0.035,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: screenSize.height * 0.003),
+                      Text(
+                        artistName,
+                        style: GoogleFonts.manrope(
+                          fontSize: screenSize.width * 0.03,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: screenSize.height * 0.008),
+                      Text(
+                        timeAgo,
+                        style: GoogleFonts.manrope(
+                          fontSize: screenSize.width * 0.025,
+                          color: Colors.white.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUltraModernSwipeCard({
+    required bool isLike,
+    required Track track,
+    required Size screenSize,
+  }) {
+    // Simulate a timestamp - in real app, you'd have actual timestamps
+    final timeAgo = track.name.length % 2 == 0 ? 'Just now' : '2h ago';
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SongDetailPage(track: track)),
+      ),
+      child: Container(
+        width: screenSize.width * 0.38,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              spreadRadius: 3,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isLike ? const Color(0xFF1DB954).withOpacity(0.3) :
+                         Colors.white.withOpacity(0.15),
+                  width: 2,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status Badge with haptic feedback simulation
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenSize.width * 0.035,
+                      vertical: screenSize.height * 0.01,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isLike ?
+                        const Color(0xFF1DB954).withOpacity(0.15) :
+                        const Color(0xFFFF5A5A).withOpacity(0.15),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(22),
+                        topRight: Radius.circular(22),
+                      ),
+                    ),
+                    child: Text(
+                      isLike ? '💚 LIKED' : '💔 DISLIKED',
+                      style: GoogleFonts.manrope(
+                        fontSize: screenSize.width * 0.032,
+                        fontWeight: FontWeight.w800,
+                        color: isLike ?
+                          const Color(0xFF1DB954) :
+                          const Color(0xFFFF5A5A),
+                      ),
+                    ),
+                  ),
+                  // Song Content
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(screenSize.width * 0.035),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Song Name
+                          Text(
+                            track.name,
+                            style: GoogleFonts.manrope(
+                              fontSize: screenSize.width * 0.042,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: screenSize.height * 0.008),
+                          // Artist Name
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.account_circle,
+                                size: screenSize.width * 0.035,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                              SizedBox(width: screenSize.width * 0.015),
+                              Expanded(
+                                child: Text(
+                                  track.artist,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: screenSize.width * 0.035,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withOpacity(0.7),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: screenSize.height * 0.012),
+                          // Time & Heart Icon
+                          Row(
+                            children: [
+                              Text(
+                                timeAgo,
+                                style: GoogleFonts.manrope(
+                                  fontSize: screenSize.width * 0.03,
+                                  color: Colors.white.withOpacity(0.55),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: EdgeInsets.all(screenSize.width * 0.015),
+                                decoration: BoxDecoration(
+                                  color: isLike ?
+                                    const Color(0xFF1DB954).withOpacity(0.2) :
+                                    const Color(0xFFFF5A5A).withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isLike ? Icons.favorite : Icons.heart_broken,
+                                  color: isLike ?
+                                    const Color(0xFF1DB954) :
+                                    const Color(0xFFFF5A5A),
+                                  size: screenSize.width * 0.045,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getMockSongName(int index) {
+    List<String> songs = [
+      'Blinding Lights',
+      'Watermelon Sugar',
+      'Shape of You',
+      'levitating',
+      'Stay'
+    ];
+    return songs[index % songs.length];
+  }
+
+  String _getMockArtistName(int index) {
+    List<String> artists = [
+      'The Weeknd',
+      'Harry Styles',
+      'Ed Sheeran',
+      'Dua Lipa',
+      'The Kid LAROI'
+    ];
+    return artists[index % artists.length];
+  }
+
+  Widget _buildGenreChip(String genre, String trend, Size screenSize) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: screenSize.width * 0.04,
+        vertical: screenSize.height * 0.012,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.15),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            genre,
+            style: GoogleFonts.manrope(
+              fontSize: screenSize.width * 0.035,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: screenSize.width * 0.02),
+          Text(
+            trend,
+            style: GoogleFonts.manrope(
+              fontSize: screenSize.width * 0.025,
+              color: const Color(0xFF1DB954),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassInsightCard({
+    required String title,
+    required String insight,
+    required String trend,
+    required Size screenSize,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: EdgeInsets.all(screenSize.width * 0.05),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.blue.withOpacity(0.1),
+                Colors.purple.withOpacity(0.1),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.tips_and_updates_outlined,
+                    color: Colors.yellowAccent,
+                    size: screenSize.width * 0.06,
+                  ),
+                  SizedBox(width: screenSize.width * 0.02),
+                  Text(
+                    title,
+                    style: GoogleFonts.manrope(
+                      fontSize: screenSize.width * 0.04,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: screenSize.height * 0.01),
+              Text(
+                insight,
+                style: GoogleFonts.manrope(
+                  fontSize: screenSize.width * 0.035,
+                  color: Colors.white.withOpacity(0.8),
+                  height: 1.3,
+                ),
+              ),
+              SizedBox(height: screenSize.height * 0.015),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenSize.width * 0.025,
+                  vertical: screenSize.height * 0.005,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1DB954).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  trend,
+                  style: GoogleFonts.manrope(
+                    fontSize: screenSize.width * 0.03,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1DB954),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
