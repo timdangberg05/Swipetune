@@ -146,26 +146,6 @@ class SongService{
     return tracks;
   }
 
-  Future<String?> getDeezerPreviewUrl(Track track) async{
-    final trackname = track.name;
-    final artist = track.artist;
-    final baseUrl = 'api.deezer.com';
-    final endpoint = '/search';
-    final queryParameters = {'q': 'artist:"$artist" track:"$trackname"'};
-
-    final url = Uri.https(baseUrl, endpoint, queryParameters);
-
-    final response = await http.get(url);
-
-    if(response.statusCode == 200){
-      Map<String, dynamic> map = jsonDecode(response.body);
-      
-      return map['data'][0]['preview'];
-      
-    } else {
-      throw Exception('Error occured');
-    }
-
-  }
+  
 
 }

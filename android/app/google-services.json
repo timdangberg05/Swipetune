@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1009653952783",
+    "project_id": "swiptunes",
+    "storage_bucket": "swiptunes.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1009653952783:android:db6924c7064ad46c4ace7a",
+        "android_client_info": {
+          "package_name": "com.example.swipetune"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgQoF2JoTVcI7Ugm_z1hx_-mV2qGL_nRY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

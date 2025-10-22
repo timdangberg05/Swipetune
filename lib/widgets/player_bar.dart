@@ -2,12 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:swipetune/models/Track.dart';
-import 'package:swipetune/services/preview_service.dart';
+import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
+
 
 /// Animated music player with liquid glass design for the swipe card
 class LiquidMusicPlayer extends StatefulWidget {
-  final Track track;
+  final FirebaseTrack track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
   final double titleOffset; // Offset für Slide-Animation
@@ -84,7 +84,7 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  widget.track.artist,
+                  widget.track.primaryArtistName,
                   style: GoogleFonts.manrope(
                     fontSize: 16,
                     color: Colors.white70,

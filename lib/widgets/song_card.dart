@@ -2,14 +2,16 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:swipetune/API/SongService.dart';
 import 'package:swipetune/API/SpotifyApiClient.dart';
-import 'package:swipetune/models/Track.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:swipetune/API/firebase_client.dart';
+import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
+import 'package:swipetune/services/discovery_service.dart';
+import 'package:swipetune/utils/local_preferences_storage.dart';
 import 'player_bar.dart';
 
 class GlassSongCard extends StatefulWidget {
-  final Track track;
+  final FirebaseTrack track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
 
@@ -37,12 +39,20 @@ class _GlassSongCardState extends State<GlassSongCard>
   late final Animation<double> _downShiftAnim;
   late final Animation<double> _infoFadeAnim;
   late final AudioPlayer player;
-  late final SongService songservice;
+  late final DiscoveryService discoveryService;
   late final SpotifyApiClient apiclient;
+  late final LocalPreferenceStorage localPreferenceStorage;
+  late final FirebaseClient firebaseClient;
 
   @override
   void initState() {
     super.initState();
+    localPreferenceStorage = LocalPreferenceStorage();
+    apiclient = SpotifyApiClient();
+    firebaseClient = FirebaseClient();
+    discoveryService = DiscoveryService(this.firebaseClient, this.localPreferenceStorage, this.apiclient);
+    initPlayer();
+
 
     _controller = AnimationController(
       vsync: this,
@@ -72,10 +82,12 @@ class _GlassSongCardState extends State<GlassSongCard>
     );
   }
 
-  void _toggleExpand() {
+  void _toggleExpand() 
+  {
     setState(() {
       _isExpanded = !_isExpanded;
-      if (_isExpanded) {
+      if (_isExpanded) 
+      {
         _controller.forward();
       } else {
         _controller.reverse();
@@ -83,11 +95,10 @@ class _GlassSongCardState extends State<GlassSongCard>
     });
   }
 
-  void initPlayer() async {
+  void initPlayer() async 
+  {
     player = AudioPlayer();
-    apiclient = SpotifyApiClient();
-    songservice = SongService(apiclient);
-    String? previewUrl = await songservice.getDeezerPreviewUrl(widget.track); 
+    String? previewUrl = await discoveryService.getDeezerPreviewUrl(widget.track); 
     if(previewUrl != null){
       player.setUrl(previewUrl);
     }
@@ -101,7 +112,6 @@ class _GlassSongCardState extends State<GlassSongCard>
     final collapsedHeight = collapsedWidth * 1.65;
     final topMargin = _isExpanded ? 35.0 : 20.0;
     
-    initPlayer();
     
     
 
