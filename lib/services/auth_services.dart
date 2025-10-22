@@ -9,7 +9,7 @@ import '../auth/deep_link_handler.dart';
 
 class AuthServices {
 
-  static final String clientId = 'c2a497f89d95452f9cc6c0c5ffb115b4';
+  static final String clientId = '98e5b85570b041a893f4fe88cbeee579';
   static final String redirectUri = 'swipetune://callback';
   static final List<String> scopes = ['user-read-email','user-read-private','playlist-modify-public','playlist-modify-private','user-top-read','playlist-read-private'];
   
