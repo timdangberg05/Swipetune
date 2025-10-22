@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:swipetune/models/query_state_model.dart';
 
 import './SpotifyApiClient.dart';
@@ -52,7 +54,7 @@ class SongService{
   }
 
   Future<List<Track>> searchWithQuery(QueryStateModel query) async
-  {
+  { 
     final queryResponse = await _apiClient.get('/search?q=${query.query}&type=track&limit=20&offset=${query.offset}&market=US');
     final tracks = (queryResponse['tracks']['items'] as List).map((item) => Track.fromMap(item)).toList();
     query.incrementOffset();
@@ -143,4 +145,25 @@ class SongService{
     List<Track> tracks = trackList.map((item) => Track.fromMap(item)).toList();
     return tracks;
   }
+
+  Future<Map<String, dynamic>> getDeezerPreviewUrl(Track track) async{
+    final trackname = track.name;
+    final artist = track.artist;
+    final baseUrl = 'api.deezer.com';
+    final endpoint = '/search';
+    final queryParameters = {'q': 'artist:"$artist" track:"$trackname"'};
+
+    final url = Uri.https(baseUrl, endpoint, queryParameters);
+
+    final response = await http.get(url);
+
+    if(response.statusCode == 200){
+      Map<String, dynamic> map = jsonDecode(response.body);
+      return map['data'][0]['preview'];
+    } else {
+      throw Exception('Error occured');
+    }
+
+  }
+
 }

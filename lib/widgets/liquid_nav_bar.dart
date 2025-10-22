@@ -17,41 +17,29 @@ class LiquidNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Animation, um die Leiste von unten ins Bild gleiten zu lassen.
-    final slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 2), // Startet außerhalb des Bildschirms
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
-
-    return SlideTransition(
-      position: slideAnimation,
-      child: FadeTransition(
-        opacity: animation,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 30, left: 24, right: 24),
-            height: 64,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(32),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildNavItem(Icons.swipe_rounded, "Swipe", 0),
-                      _buildNavItem(Icons.library_music_rounded, "Library", 1),
-                      _buildNavItem(Icons.favorite_border_rounded, "Likes", 2),
-                      _buildNavItem(Icons.settings_outlined, "Settings", 3),
-                    ],
-                  ),
-                ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 30, left: 24, right: 24),
+        height: 64,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(Icons.swipe_rounded, "Swipe", 0),
+                  _buildNavItem(Icons.library_music_rounded, "Library", 1),
+                  _buildNavItem(Icons.favorite_border_rounded, "Likes", 2),
+                  _buildNavItem(Icons.settings_outlined, "Settings", 3),
+                ],
               ),
             ),
           ),

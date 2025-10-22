@@ -22,25 +22,75 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+ValueNotifier<double> navBarProgressNotifier = ValueNotifier<double>(0.0);
+
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
+  late AnimationController _navBarController;
+  late Animation<Offset> _navBarAnimation;
   bool _isAnimatingToPage = false;
   int? _targetPage;
+  bool _isNavBarVisible = true;
+  double _lastScrollOffset = 0.0;
 
   @override
   void initState() {
     super.initState();
     widget.transitionController.forward();
+
+    // Aufbau Animation Controller für Navbar - More responsive like Dynamic Island
+    _navBarController = AnimationController(
+      duration: const Duration(milliseconds: 100), // Faster response
+      vsync: this,
+    );
+
+    _navBarAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0.0, 1.0),
+    ).animate(CurvedAnimation(
+      parent: _navBarController,
+      curve: Curves.fastOutSlowIn, // More dynamic curve like Dynamic Island
+    ));
+
+
+    // Listener for page changes to reset navbar visibility on certain pages
+    widget.currentPageNotifier.addListener(_onPageChanges);
+
+    // Sync navbar controller with navBarProgressNotifier from settings screen
+    navBarProgressNotifier.addListener(_onNavProgressChanged);
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _scrollController.dispose();
-    _debounce?.cancel();
-    super.dispose();
+
+
+  void _hideNavBar() {
+    setState(() {
+      _isNavBarVisible = false;
+    });
+    _navBarController.forward();
+  }
+
+  void _showNavBar() {
+    setState(() {
+      _isNavBarVisible = true;
+    });
+    _navBarController.reverse();
+  }
+
+  void _onPageChanges() {
+    int page = widget.currentPageNotifier.value;
+    // Bei Page-Wechsel, Navbar immer wieder zeigen (außer evtl. bei Settings wenn scrolled)
+    // Für Settings, starten wir als sichtbar
+    if (page == 3) {
+      _navBarController.animateTo(0.0, duration: Duration(milliseconds: 300));
+    } else {
+      _navBarController.animateTo(0.0, duration: Duration(milliseconds: 300));
+    }
+  }
+
+  void _onNavProgressChanged() {
+    _navBarController.value = navBarProgressNotifier.value;
   }
 
   void _onPageSwiped(int page) {
@@ -62,42 +112,76 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   @override
+  void dispose() {
+    widget.currentPageNotifier.removeListener(_onPageChanges);
+    navBarProgressNotifier.removeListener(_onNavProgressChanged);
+    _navBarController.dispose();
+    _scrollController.dispose();
+    _pageController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: _onPageSwiped,
-            itemCount: 4,
-            itemBuilder: (context, index) {
-              switch (index) {
-                case 0:
-                  return const SwipeHomePage();
-                case 1:
-                  return LibraryScreen(scrollController: widget.sharedScrollController ?? _scrollController);
-                case 2:
-                  return const Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)));
-                case 3:
-                  return SettingsScreen(scrollController: widget.sharedScrollController ?? _scrollController);
-                default:
-                  return const SizedBox();
+          NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification notification) {
+              if (notification is ScrollUpdateNotification &&
+                  widget.currentPageNotifier.value == 3 &&
+                  notification.metrics.axis == Axis.vertical) {
+                final offset = notification.metrics.pixels;
+                final delta = offset - _lastScrollOffset;
+                if (_navBarController.isAnimating) _navBarController.stop();
+                // Up scroll (negative delta) increases hide progress (navBar moves down)
+                if (delta < 0) {
+                  _navBarController.value = (_navBarController.value + delta.abs() * 0.05).clamp(0.0, 1.0);
+                } else if (delta > 0) {
+                  // Down scroll decreases hide progress (navBar moves up)
+                  _navBarController.value = (_navBarController.value - delta * 0.05).clamp(0.0, 1.0);
+                }
+                _lastScrollOffset = offset;
+                navBarProgressNotifier.value = _navBarController.value;
               }
+              return false;
             },
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-        
-            child: ValueListenableBuilder<int>(
-              valueListenable: widget.currentPageNotifier,
-              builder: (context, currentPage, child) {
-                return LiquidNavBar(
-                  selectedIndex: currentPage,
-                  onTabTapped: _onNavItemTapped,
-                  animation: widget.transitionController.view,
-                );
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: _onPageSwiped,
+              itemCount: 4,
+              itemBuilder: (context, index) {
+                switch (index) {
+                  case 0:
+                    return const SwipeHomePage();
+                  case 1:
+                    return LibraryScreen(scrollController: widget.sharedScrollController ?? _scrollController);
+                  case 2:
+                    return const Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)));
+                  case 3:
+                    return SettingsScreen(scrollController: widget.sharedScrollController ?? _scrollController, navBarProgress: navBarProgressNotifier);
+                  default:
+                    return const SizedBox();
+                }
               },
+            ),
+          ),
+          SlideTransition(
+            position: _navBarAnimation,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ValueListenableBuilder<int>(
+                valueListenable: widget.currentPageNotifier,
+                builder: (context, currentPage, child) {
+                  return LiquidNavBar(
+                    selectedIndex: currentPage,
+                    onTabTapped: _onNavItemTapped,
+                    animation: widget.transitionController.view,
+                  );
+                },
+              ),
             ),
           ),
         ],
