@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:swipetune/API/SongService.dart';
+import 'package:swipetune/API/SpotifyApiClient.dart';
 import 'package:swipetune/models/Track.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'player_bar.dart';
@@ -33,6 +36,9 @@ class _GlassSongCardState extends State<GlassSongCard>
   late Animation<double> _titleSlideAnim;
   late final Animation<double> _downShiftAnim;
   late final Animation<double> _infoFadeAnim;
+  late final AudioPlayer player;
+  late final SongService songservice;
+  late final SpotifyApiClient apiclient;
 
   @override
   void initState() {
@@ -77,6 +83,16 @@ class _GlassSongCardState extends State<GlassSongCard>
     });
   }
 
+  void initPlayer() async {
+    player = AudioPlayer();
+    apiclient = SpotifyApiClient();
+    songservice = SongService(apiclient);
+    String? previewUrl = await songservice.getDeezerPreviewUrl(widget.track); 
+    if(previewUrl != null){
+      player.setUrl(previewUrl);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -84,6 +100,10 @@ class _GlassSongCardState extends State<GlassSongCard>
     final collapsedWidth = (screenSize.width * 0.83).clamp(300.0, 420.0);
     final collapsedHeight = collapsedWidth * 1.65;
     final topMargin = _isExpanded ? 35.0 : 20.0;
+    
+    initPlayer();
+    
+    
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -166,6 +186,7 @@ class _GlassSongCardState extends State<GlassSongCard>
                                 titleOffset: titleSlide,
                                 controlsFade: controlsFade,
                                 textColor: _textColor,
+                                player: player,
                                 textShadows: [
                                   Shadow(
                                     offset: const Offset(1.5, 1.5),
