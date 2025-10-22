@@ -13,17 +13,14 @@ class Preview{
 
   Preview._();
 
-  static void playPreview(Track track)async {
+  static void initPreview(Track track)async {
     
     songService = SongService(apiClient);
 
     String? previewUrl = await songService.getDeezerPreviewUrl(track);
     
     if(previewUrl != null){
-
       player.setUrl(previewUrl);
-      player.play();
-
     }
   }
 

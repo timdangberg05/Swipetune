@@ -1,15 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:swipetune/models/Track.dart';
+import 'package:swipetune/services/preview_service.dart';
 
 /// Animated music player with liquid glass design for the swipe card
-class LiquidMusicPlayer extends StatelessWidget {
+class LiquidMusicPlayer extends StatefulWidget {
   final Track track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
   final double titleOffset; // Offset für Slide-Animation
   final double controlsFade; // Fade für Controls
+  final AudioPlayer player;
 
   const LiquidMusicPlayer({
     super.key,
@@ -18,10 +21,33 @@ class LiquidMusicPlayer extends StatelessWidget {
     required this.onPlayPause,
     this.titleOffset = 0.0,
     this.controlsFade = 1.0, required Color textColor, required List<Shadow> textShadows,
+    required this.player,
   });
+
+  
+
+
+  @override
+  State<LiquidMusicPlayer> createState() => _LiquidMusicPlayerState();
+
+}
+
+class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
+
+  
+  void onPlayPause(){
+    if(widget.player.playing){
+      widget.player.pause();
+    }else{
+      widget.player.play();
+    }
+  }
+  
 
   @override
   Widget build(BuildContext context) {
+    
+    
     const textShadow = Shadow(
       offset: Offset(1.5, 1.5),
       blurRadius: 2.0,
@@ -36,12 +62,12 @@ class LiquidMusicPlayer extends StatelessWidget {
         children: [
           // Slide-Animation für Songtitel & Artist (KEIN Fade!)
           Transform.translate(
-            offset: Offset(0, titleOffset),
+            offset: Offset(0,   widget.titleOffset),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  track.name,
+                  widget.track.name,
                   style: GoogleFonts.manrope(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
@@ -53,7 +79,7 @@ class LiquidMusicPlayer extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  track.artist,
+                  widget.track.artist,
                   style: GoogleFonts.manrope(
                     fontSize: 16,
                     color: Colors.white70,
@@ -70,7 +96,7 @@ class LiquidMusicPlayer extends StatelessWidget {
 
           // Player controls mit Fade-Out
           Opacity(
-            opacity: controlsFade, // Nur Controls faden
+            opacity: widget.controlsFade, // Nur Controls faden
             child: Row(
               children: [
                 _buildPlayPauseButton(),
@@ -86,56 +112,114 @@ class LiquidMusicPlayer extends StatelessWidget {
 
   /// Play/pause button with glass effect
   Widget _buildPlayPauseButton() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+    return StreamBuilder<PlayerState>(
+        stream: widget.player.playerStateStream,
+        builder: (context, snapshot){
+          final playerState = snapshot.data;
+          final isPlaying = playerState?.playing ?? false;
+          final processingState = playerState?.processingState;
+
+          if(processingState == ProcessingState.loading || processingState == ProcessingState.buffering){
+            return Container(
+              width: 56,
+              height: 56,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white)
+              )
+            );
+          }
+
+          return ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
-          ),
-          child: IconButton(
-            icon: Icon(
-              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: Colors.white,
-              size: 32,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                  onPressed: onPlayPause,
+                ),
+              ),
             ),
-            onPressed: onPlayPause,
-          ),
-        ),
-      ),
+          );
+
+
+        }
     );
+    
+    
+    
   }
 
   /// Animated progress bar
+  /// Animated progress bar
   Widget _buildProgressBar() {
-    return Container(
-      height: 56,
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-        width: isPlaying ? 120 : 0,
-        height: 8,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.8),
-              Colors.white.withOpacity(0.5),
-            ],
+    // 1. StreamBuilder lauscht auf die Position des Players
+    return StreamBuilder<Duration>(
+      stream: widget.player.positionStream,
+      builder: (context, snapshot) {
+        // Aktuelle Position aus dem Stream (oder 0, wenn noch nichts da ist)
+        final position = snapshot.data ?? Duration.zero;
+        // Gesamtdauer des Tracks direkt vom Player holen
+        final totalDuration = widget.player.duration ?? Duration.zero;
+
+        // Berechne den Fortschritt als Wert zwischen 0.0 und 1.0
+        double progress = 0.0;
+        if (totalDuration.inMilliseconds > 0) {
+          progress = position.inMilliseconds / totalDuration.inMilliseconds;
+        }
+
+        return Container(
+          height: 56,
+          //padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-      ),
+          // 2. LayoutBuilder gibt uns die maximale Breite für die Berechnung
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  // Der Hintergrund des Balkens
+                  Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  // Der animierte Vordergrund, der den Fortschritt anzeigt
+                  Container(
+                    width: constraints.maxWidth * progress, // 3. Breite dynamisch berechnen
+                    height: 56,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.8),
+                          Colors.white.withOpacity(0.5),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
