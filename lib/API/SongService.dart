@@ -146,7 +146,7 @@ class SongService{
     return tracks;
   }
 
-  Future<Map<String, dynamic>> getDeezerPreviewUrl(Track track) async{
+  Future<String?> getDeezerPreviewUrl(Track track) async{
     final trackname = track.name;
     final artist = track.artist;
     final baseUrl = 'api.deezer.com';
@@ -159,7 +159,9 @@ class SongService{
 
     if(response.statusCode == 200){
       Map<String, dynamic> map = jsonDecode(response.body);
+      
       return map['data'][0]['preview'];
+      
     } else {
       throw Exception('Error occured');
     }
