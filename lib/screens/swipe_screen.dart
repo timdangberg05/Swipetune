@@ -21,11 +21,6 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
   late AnimationController _snapAnimationController;
   late Animation<Offset> _snapAnimation;
 
-  Color _leftGlowColor = Colors.transparent;
-  Color _rightGlowColor = Colors.transparent;
-  double _leftGlowWidth = 0;
-  double _rightGlowWidth = 0;
-
   @override
   void initState() {
     super.initState();
@@ -51,28 +46,6 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
     super.dispose();
   }
 
-  void _triggerGlow({required bool isLike}) {
-    final width = MediaQuery.of(context).size.width;
-    setState(() {
-      if (isLike) {
-        _rightGlowColor = Colors.greenAccent.withOpacity(0.8);
-        _rightGlowWidth = width;
-      } else {
-        _leftGlowColor = Colors.redAccent.withOpacity(0.8);
-        _leftGlowWidth = width;
-      }
-    });
-
-    Future.delayed(const Duration(milliseconds: 300), () {
-      setState(() {
-        _leftGlowColor = Colors.transparent;
-        _rightGlowColor = Colors.transparent;
-        _leftGlowWidth = 0;
-        _rightGlowWidth = 0;
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<SpotifyDataProvider>(
@@ -83,48 +56,6 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
           body: SafeArea(
             child: Stack(
               children: [
-                // Linker Glow (Dislike - von links bis zur Mitte)
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: _leftGlowWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          _leftGlowColor,
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Rechter Glow (Like - von rechts bis zur Mitte)
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: _rightGlowWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerRight,
-                        end: Alignment.centerLeft,
-                        colors: [
-                          _rightGlowColor,
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
                 if (provider.isLoading)
                   const Center(
                     child: CircularProgressIndicator(color: Colors.white),
@@ -158,26 +89,27 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
                               ),
                             );
                           },
-                          onHorizontalDragUpdate: (details) =>
-                              setState(() => _dragOffset += details.delta),
+                          onHorizontalDragUpdate: (details) {
+                            setState(() => _dragOffset += details.delta);
+                            provider.dragOffsetNotifier.value = _dragOffset;
+                          },
                           onHorizontalDragEnd: (details) {
                             final width = MediaQuery.of(context).size.width;
                             final halfScreen = width * 0.5;
                             if (_dragOffset.dx.abs() > MediaQuery.of(context).size.width * 0.4) {
                               if (_dragOffset.dx > 0) {
                                 provider.likeTrack();
-                                _triggerGlow(isLike: true);
                               } else {
                                 provider.dislikeTrack();
-                                _triggerGlow(isLike: false);
                               }
 
                               setState(() {
                                 _dragOffset = Offset.zero;
                                 _isPlaying = false;
                               });
+                              provider.dragOffsetNotifier.value = Offset.zero;
                             } else {
-
+                              // Animate back to center
                               _snapAnimation = Tween<Offset>(
                                 begin: _dragOffset,
                                 end: Offset.zero,
@@ -186,7 +118,9 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
                                   parent: _snapAnimationController,
                                   curve: Curves.elasticOut,
                                 ),
-                              );
+                              )..addListener(() {
+                                provider.dragOffsetNotifier.value = _snapAnimation.value;
+                              });
                               _snapAnimationController.forward(from: 0.0);
                             }
                           },

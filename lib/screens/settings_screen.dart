@@ -113,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     final topPadding = MediaQuery.of(context).padding.top + 60; // Account for global header
     final horizontalPadding = screenSize.width * 0.04; // Responsive horizontal padding, even tighter
     final bottomPadding = MediaQuery.of(context).padding.bottom + screenSize.height * 0.01; // Responsive bottom, even tighter
-    final contentTopPadding = screenSize.height * 0.01; // Maximally tight spacing to header content
+    final contentTopPadding = screenSize.height * 0.00; // Maximally tight spacing to header content
     final headerHorizontalPadding = horizontalPadding; // Ensure consistency with scrollable area
 //------------------------------------------------------------------------
     return Consumer<UserProvider>(

@@ -1,8 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:swipetune/models/playlist_model.dart';
 import 'package:swipetune/services/playlist_service.dart';
 import '../API/SongService.dart';
 import '../models/Track.dart';
+
+enum SwipeAction { like, dislike }
 
 class SpotifyDataProvider extends ChangeNotifier {
   final SongService _songService;
@@ -13,7 +16,9 @@ class SpotifyDataProvider extends ChangeNotifier {
   List<Track> _dislikedTracks = [];
   List<PlaylistModel> _userPlaylists = [];
 
-
+// --- NEW CODE für like dislike in meta balls---
+  late final ValueNotifier<SwipeAction?> _swipeActionNotifier;
+  final ValueNotifier<Offset> dragOffsetNotifier = ValueNotifier(Offset.zero);
 
   int _currentIndex = 0;
   bool _isLoading = true;
@@ -39,7 +44,11 @@ class SpotifyDataProvider extends ChangeNotifier {
   bool get isLoadingPlaylists => _isLoadingPlaylist;
   bool get isLoadingPlaylistTracks => _isLoadingPlaylistTracks;
 
-  SpotifyDataProvider(this._songService, this._playlistSerivce);
+  ValueNotifier<SwipeAction?> get swipeActionNotifier => _swipeActionNotifier;
+
+  SpotifyDataProvider(this._songService, this._playlistSerivce) {
+    _swipeActionNotifier = ValueNotifier<SwipeAction?>(null);
+  }
 
   Future<void> loadTracks() async
   {
@@ -227,16 +236,24 @@ Future<void> loadAllPlaylistTracksInBackground() async
   {
     if(currentTrack == null) return;
     _likedTracks.add(_tracks[currentIndex]);
+    _swipeActionNotifier.value = SwipeAction.like;
     nextTrack();
     notifyListeners();
+    Future.delayed(const Duration(milliseconds: 800), () {
+      _swipeActionNotifier.value = null;
+    });
   }
 
   void dislikeTrack()
   {
     if(currentTrack == null) return;
     _dislikedTracks.add(_tracks[currentIndex]);
+    _swipeActionNotifier.value = SwipeAction.dislike;
     nextTrack();
     notifyListeners();
+    Future.delayed(const Duration(milliseconds: 800), () {
+      _swipeActionNotifier.value = null;
+    });
   }
 
   void nextTrack()

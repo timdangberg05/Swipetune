@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class Blob {
   Offset position;
-  final double radius;
-  Offset velocity; // 'final' entfernt
-  Color color;     // 'final' entfernt
+  double radius;
+  Offset velocity;
+  Color color;
   
   Blob({
     required this.position, 

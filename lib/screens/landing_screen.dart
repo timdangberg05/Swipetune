@@ -7,6 +7,9 @@ import 'package:swipetune/widgets/liquid_background.dart';
 import 'package:swipetune/widgets/logo_choreographer.dart';
 import '../services/auth_services.dart';
 
+import '../providers/spotify_data_provider.dart';
+import 'package:provider/provider.dart';
+
 enum AppState { welcome, login, signup, onboarding, home }
 
 class LandingScreen extends StatefulWidget {
@@ -107,6 +110,10 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    ValueNotifier<SwipeAction?>? swipeNotifier;
+    if (_appState == AppState.home) {
+      swipeNotifier = context.read<SpotifyDataProvider>().swipeActionNotifier;
+    }
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -115,6 +122,7 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
             time: _timeController,
             colorTransitionValue: _colorTransitionController.view,
             spotifyLogoCenterNotifier: _spotifyLogoCenterNotifier,
+            swipeActionNotifier: swipeNotifier,
             backgroundMorphController: _backgroundMorphController,
             homeTransitionController: _homeController.view,
           ),

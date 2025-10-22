@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'swipe_screen.dart';
 import '../widgets/liquid_nav_bar.dart';
 import '../widgets/header_scroll_handler.dart';
+import '../widgets/liquid_background.dart';
+import '../widgets/logo_choreographer.dart';
+import '../providers/spotify_data_provider.dart';
 import 'library_screen.dart';
 import 'settings_screen.dart';
 
@@ -30,6 +34,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Timer? _debounce;
   late AnimationController _navBarController;
   late Animation<Offset> _navBarAnimation;
+  late AnimationController _backgroundTimeController;
+  late AnimationController _dummyIntroController;
+  late AnimationController _dummySpotifyController;
+  late AnimationController _dummyAuthController;
+  final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
   bool _isAnimatingToPage = false;
   int? _targetPage;
   bool _isNavBarVisible = true;
@@ -39,6 +48,17 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     widget.transitionController.forward();
+
+    // Initialize background animation controller
+    _backgroundTimeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 100),
+    )..repeat();
+
+    // Initialize dummy controllers for LogoChoreographer (already in home state)
+    _dummyIntroController = AnimationController(vsync: this, value: 1.0);
+    _dummySpotifyController = AnimationController(vsync: this, value: 0.0);
+    _dummyAuthController = AnimationController(vsync: this, value: 0.0);
 
     // Aufbau Animation Controller für Navbar - More responsive like Dynamic Island
     _navBarController = AnimationController(
@@ -116,6 +136,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     widget.currentPageNotifier.removeListener(_onPageChanges);
     navBarProgressNotifier.removeListener(_onNavProgressChanged);
     _navBarController.dispose();
+    _backgroundTimeController.dispose();
+    _dummyIntroController.dispose();
+    _dummySpotifyController.dispose();
+    _dummyAuthController.dispose();
     _scrollController.dispose();
     _pageController.dispose();
     _debounce?.cancel();
@@ -124,10 +148,20 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<SpotifyDataProvider>();
+    
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
+          // Add LiquidGlassBackground for the swipe screen
+          LiquidGlassBackground(
+            time: _backgroundTimeController,
+            colorTransitionValue: AlwaysStoppedAnimation(0.0),
+            spotifyLogoCenterNotifier: _spotifyLogoCenterNotifier,
+            swipeActionNotifier: provider.swipeActionNotifier,
+            homeTransitionController: widget.transitionController,
+          ),
           NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification notification) {
               if (notification is ScrollUpdateNotification &&
@@ -167,6 +201,16 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 }
               },
             ),
+          ),
+          // Add back the header
+          LogoChoreographer(
+            introController: _dummyIntroController,
+            spotifyController: _dummySpotifyController,
+            authController: _dummyAuthController,
+            homeController: widget.transitionController,
+            onCancelSpotify: () {},
+            currentPageNotifier: widget.currentPageNotifier,
+            scrollController: widget.sharedScrollController ?? _scrollController,
           ),
           SlideTransition(
             position: _navBarAnimation,
