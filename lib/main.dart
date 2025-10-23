@@ -27,6 +27,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await Hive.initFlutter();
+  Hive.registerAdapter(PersonalAlbumAdapter());
+  await Hive.openBox<PersonalAlbum>('personal_albums');
   
   runApp(
     MultiProvider(
