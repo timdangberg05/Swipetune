@@ -2,12 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
 import 'package:swipetune/models/user_model.dart';
 import 'package:swipetune/providers/spotify_data_provider.dart';
 import 'package:swipetune/screens/landing_screen.dart';
 import 'package:swipetune/services/auth_services.dart';
 import '../providers/user_provider.dart';
-import '../models/Track.dart';
 import 'songdetails.dart';
 
 
@@ -382,7 +382,7 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                   itemCount: recentSwipes.length,
                   itemBuilder: (context, index) {
                     final swipe = recentSwipes[index];
-                    final track = swipe['track'] as Track;
+                    final track = swipe['track'] as FirebaseTrack;
                     final isLike = swipe['isLike'] as bool;
                     return Padding(
                       padding: EdgeInsets.only(right: screenSize.width * 0.03),
@@ -1250,7 +1250,7 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
 
   Widget _buildUltraModernSwipeCard({
     required bool isLike,
-    required Track track,
+    required FirebaseTrack track,
     required Size screenSize,
   }) {
     // Simulate a timestamp - in real app, you'd have actual timestamps

@@ -1,12 +1,17 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:swipetune/models/Track.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:swipetune/API/SpotifyApiClient.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:swipetune/API/firebase_client.dart';
+import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
+import 'package:swipetune/services/discovery_service.dart';
+import 'package:swipetune/utils/local_preferences_storage.dart';
 import 'player_bar.dart';
 
 class GlassSongCard extends StatefulWidget {
-  final Track track;
+  final FirebaseTrack track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
 
@@ -33,10 +38,21 @@ class _GlassSongCardState extends State<GlassSongCard>
   late Animation<double> _titleSlideAnim;
   late final Animation<double> _downShiftAnim;
   late final Animation<double> _infoFadeAnim;
+  late final AudioPlayer player;
+  late final DiscoveryService discoveryService;
+  late final SpotifyApiClient apiclient;
+  late final LocalPreferenceStorage localPreferenceStorage;
+  late final FirebaseClient firebaseClient;
 
   @override
   void initState() {
     super.initState();
+    localPreferenceStorage = LocalPreferenceStorage();
+    apiclient = SpotifyApiClient();
+    firebaseClient = FirebaseClient();
+    discoveryService = DiscoveryService(this.firebaseClient, this.localPreferenceStorage, this.apiclient);
+    initPlayer();
+
 
     _controller = AnimationController(
       vsync: this,
@@ -66,15 +82,26 @@ class _GlassSongCardState extends State<GlassSongCard>
     );
   }
 
-  void _toggleExpand() {
+  void _toggleExpand() 
+  {
     setState(() {
       _isExpanded = !_isExpanded;
-      if (_isExpanded) {
+      if (_isExpanded) 
+      {
         _controller.forward();
       } else {
         _controller.reverse();
       }
     });
+  }
+
+  void initPlayer() async 
+  {
+    player = AudioPlayer();
+    String? previewUrl = await discoveryService.getDeezerPreviewUrl(widget.track); 
+    if(previewUrl != null){
+      player.setUrl(previewUrl);
+    }
   }
 
   @override
@@ -84,6 +111,9 @@ class _GlassSongCardState extends State<GlassSongCard>
     final collapsedWidth = (screenSize.width * 0.83).clamp(300.0, 420.0);
     final collapsedHeight = collapsedWidth * 1.65;
     final topMargin = _isExpanded ? 35.0 : 20.0;
+    
+    
+    
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -166,6 +196,7 @@ class _GlassSongCardState extends State<GlassSongCard>
                                 titleOffset: titleSlide,
                                 controlsFade: controlsFade,
                                 textColor: _textColor,
+                                player: player,
                                 textShadows: [
                                   Shadow(
                                     offset: const Offset(1.5, 1.5),

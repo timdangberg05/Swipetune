@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:swipetune/models/Track.dart';
+import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
 import '/widgets/liquid_background.dart';
 
 class SongDetailPage extends StatefulWidget {
-  final Track track;
+  final FirebaseTrack track;
   const SongDetailPage({super.key, required this.track});
 
   @override
@@ -175,7 +175,7 @@ class _SongDetailPageState extends State<SongDetailPage>
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          track.artist,
+                          track.primaryArtistName,
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.85),
                             fontSize: 18,
