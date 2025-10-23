@@ -120,15 +120,18 @@ Future<void> loadAllPlaylistTracksInBackground() async
 
 
 
-  Future<void> createLikeSongsPlaylist(String userId) async 
+  Future<void> createLikeSongsPlaylist(String userId) async
   {
     try
     {
-      final existingPlaylist = _userPlaylists.firstWhere((p) => p.name == 'Swipetunes Likes',orElse: () => null as PlaylistModel);
+      //problematische `null as PlaylistModel` in der Playlist-Suche wurde zu sicherer Null-Verarbeitung geändert
+      final existingPlaylist = _userPlaylists.cast<PlaylistModel?>().firstWhere((p) => p?.name == 'Swipetunes Likes', orElse: () => null);
+      
+      //Ursprünglich -> führt aber zum Crash der App final existingPlaylist = _userPlaylists.firstWhere((p) => p.name == 'Swipetunes Likes',orElse: () => null as PlaylistModel);
       if(existingPlaylist != null)
       {
         _swipTunePlaylistId = existingPlaylist.id;
-        return; 
+        return;
       }
       final playlist = await _playlistSerivce.createPlaylist(userId, 'Swipetunes Likes', description: 'Your liked Tracks from Swipetunes', isPublic: false);
       _swipTunePlaylistId = playlist.id;
