@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -34,6 +35,7 @@ class LiquidMusicPlayer extends StatefulWidget {
 
 class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
 
+  late final StreamSubscription<PlayerState> _playerStateSubscription;
   
   void onPlayPause(){
     if(widget.player.playing){
@@ -43,6 +45,22 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
     }
   }
   
+  void listenToPlayerCompletion(){
+    _playerStateSubscription = widget.player.playerStateStream.listen((state){
+        if(state.processingState == ProcessingState.completed){
+          widget.player.seek(Duration.zero);
+          widget.player.pause();
+        }
+      }
+    );
+  }
+
+  @override
+  void initState(){
+    listenToPlayerCompletion();
+    super.initState();
+  }
+
   @override
   void dispose(){
     widget.player.dispose();
@@ -183,13 +201,13 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
         if (totalDuration.inMilliseconds > 0) {
           progress = position.inMilliseconds / totalDuration.inMilliseconds;
         }
-
+        
         return Container(
-          height: 56,
+          height: 30,
           //padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(16),
+            color: Colors.black.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(4),
           ),
           // 2. LayoutBuilder gibt uns die maximale Breite für die Berechnung
           child: LayoutBuilder(
@@ -199,7 +217,7 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
                 children: [
                   // Der Hintergrund des Balkens
                   Container(
-                    height: 56,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -207,13 +225,14 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
                   ),
                   // Der animierte Vordergrund, der den Fortschritt anzeigt
                   Container(
+
                     width: constraints.maxWidth * progress, // 3. Breite dynamisch berechnen
-                    height: 56,
+                    height: 30,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
                       gradient: LinearGradient(
                         colors: [
-                          Colors.white.withOpacity(0.8),
+                          Colors.white.withOpacity(0.9),
                           Colors.white.withOpacity(0.5),
                         ],
                       ),
