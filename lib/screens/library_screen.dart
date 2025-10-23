@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive/hive.dart';
 import 'package:swipetune/models/Track.dart';
 import 'package:swipetune/services/playlist_service.dart';
 import '../widgets/library/library_back_button.dart';
@@ -10,6 +11,10 @@ import '../widgets/library/song_item.dart';
 import 'package:provider/provider.dart';
 import '../providers/spotify_data_provider.dart';
 import '../models/playlist_model.dart';
+import '../models/personal_album.dart';
+import '../services/library_service.dart';
+import '../widgets/library/liked_songs_card.dart';
+import '../widgets/library/album_tile.dart';
 
 class LibraryScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -25,6 +30,8 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
   late AnimationController _morphController;
   final ScrollController _detailScrollController = ScrollController();
   final ValueNotifier<double> _scrollOffsetNotifier = ValueNotifier<double>(0.0);
+  late final LibraryService libraryService = LibraryService();
+  final TextEditingController _albumNameController = TextEditingController();
   
   @override
   void initState() {
@@ -77,6 +84,69 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     });
   }
 
+  void _createAlbumDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+            child: Container(
+              color: Colors.white.withOpacity(0.1),
+              height: 200,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextField(
+                      controller: _albumNameController,
+                      style: TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Album Name',
+                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('Cancel', style: TextStyle(color: Colors.white)),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (_albumNameController.text.isNotEmpty) {
+                              libraryService.createAlbum(_albumNameController.text);
+                              Navigator.of(context).pop();
+                              _albumNameController.clear();
+                            }
+                          },
+                          child: Text('Create'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -92,6 +162,8 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
         
         if (_selectedPlaylist != null)
           _buildPlaylistDetailView(context, _selectedPlaylist!),
+
+
       ],
     );
   }
@@ -118,12 +190,75 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
                 bottom: size.height * 0.015,
               ),
               child: Text(
-                'Your Library',
+                'Bibliothek',
                 style: GoogleFonts.manrope(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.only(
+            left: horizontalPadding,
+            right: horizontalPadding,
+            bottom: 16,
+          ),
+          sliver: SliverToBoxAdapter(child: LikedSongsCard()),
+        ),
+        ValueListenableBuilder<Box<PersonalAlbum>>(
+          valueListenable: libraryService.getAlbumsListenable(),
+          builder: (context, box, _) {
+            final albums = box.values.toList();
+            final totalCount = albums.isEmpty ? 1 : albums.length + 1;
+            return SliverPadding(
+              padding: EdgeInsets.only(
+                left: horizontalPadding,
+                right: horizontalPadding,
+                bottom: 16,
+              ),
+              sliver: SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (albums.isEmpty || index == albums.length) {
+                      return AlbumTile(
+                        isCreate: true,
+                        onTap: () => _createAlbumDialog(context),
+                      );
+                    }
+                    final album = albums[index];
+                    return AlbumTile(
+                      album: album,
+                      onTap: () {},
+                    );
+                  },
+                  childCount: totalCount,
+                ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.8,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+              ),
+            );
+          },
+        ),
+        SliverPadding(
+          padding: EdgeInsets.only(
+            left: horizontalPadding,
+            right: horizontalPadding,
+            bottom: 16,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              'Spotify Playlists',
+              style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white.withOpacity(0.7),
               ),
             ),
           ),

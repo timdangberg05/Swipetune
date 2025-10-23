@@ -10,6 +10,9 @@ import '../services/auth_services.dart';
 import '../providers/spotify_data_provider.dart';
 import 'package:provider/provider.dart';
 
+// Stelle sicher, dass SwipeAction definiert ist (z.B. in spotify_data_provider.dart)
+// enum SwipeAction { like, dislike }
+
 enum AppState { welcome, login, signup, onboarding, home }
 
 class LandingScreen extends StatefulWidget {
@@ -20,10 +23,10 @@ class LandingScreen extends StatefulWidget {
 
 class _LandingScreenState extends State<LandingScreen> with TickerProviderStateMixin {
   late AnimationController _timeController, _transitionController, _colorTransitionController, _spotifyAuthController, _authPageController, _backgroundMorphController, _homeController;
+  late AnimationController _spotifySuccessController; // Controller für Haken-Animation
+
   AppState _appState = AppState.welcome;
 
-  // ZENTRALE STATE-VERWALTUNG um den teilt dem LogoChoreographer mit, welche Seite aktiv ist
-  // und ermöglicht so stabile Header-Animationen.
   final ValueNotifier<int> _currentPageNotifier = ValueNotifier(0);
   final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
   final ScrollController _sharedScrollController = ScrollController();
@@ -34,10 +37,12 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _timeController = AnimationController(vsync: this, duration: const Duration(seconds: 30))..repeat();
     _transitionController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
     _colorTransitionController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _spotifyAuthController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));  
+    _spotifyAuthController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
     _authPageController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _backgroundMorphController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _homeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _spotifySuccessController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000)); // Dauer für Haken
+
     _checkExistingLogin();
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) _transitionController.forward();
@@ -53,67 +58,114 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
     _authPageController.dispose();
     _backgroundMorphController.dispose();
     _homeController.dispose();
-    // Die Notifier von 'incoming' werden korrekt disposed.
+    _spotifySuccessController.dispose();
     _spotifyLogoCenterNotifier.dispose();
     _currentPageNotifier.dispose();
     _sharedScrollController.dispose();
     super.dispose();
   }
 
-  // NEU: Die komplette Auto-Login-Funktion aus 'current' wurde übernommen.
-  // Sie wurde angepasst, um den 'home'-State von 'incoming' zu verwenden.
   Future<void> _checkExistingLogin() async {
     await Future.delayed(const Duration(milliseconds: 1000));
     final hasTokens = await AuthServices.tokenStore.hasValidTokens();
     if (hasTokens) {
       if (mounted) {
-        _setAppState(AppState.home); // Verwendet 'home' statt 'homepage'
+        _setAppState(AppState.home);
       }
     }
   }
 
-  // Die setAppState-Logik von 'incoming' wurde beibehalten.
   void _setAppState(AppState newState) {
+    // Nur ändern, wenn der Status tatsächlich neu ist
+    if (_appState == newState) return;
+
     setState(() {
       _appState = newState;
       if (newState == AppState.login || newState == AppState.signup) {
         _authPageController.forward();
       } else if (newState == AppState.home) {
-        // Stellt sicher, dass die HomePage-Animation startet
+         // Reset other controllers if necessary when going home
+         _spotifyAuthController.reset();
+         _spotifySuccessController.reset();
+         _authPageController.reset();
         _homeController.forward();
       } else if (newState == AppState.welcome) {
+        // Reset everything when going back to welcome
+         _spotifyAuthController.reset();
+         _spotifySuccessController.reset();
+         _homeController.reset();
         _authPageController.reverse();
       }
     });
   }
 
+  // --- KORRIGIERTE LOGIK FÜR DEN SPOTIFY FLOW ---
   void _toggleSpotifyFlow(bool isActive) async {
     if (isActive) {
+      // 1. Start: Bubbles werden grün, "Connecting"-Logo erscheint
       _colorTransitionController.forward();
       _spotifyAuthController.forward();
       try {
+        // 2. Warten auf den Web-Login
         await AuthServices.login();
-        await Future.delayed(const Duration(milliseconds: 1500));
-        if (mounted) _setAppState(AppState.home);
+
+        // 3. Erfolg! Starte die Haken-Animation
+        if (mounted) {
+          // Bubbles "butterweich" zurück zu lila/blau
+          _colorTransitionController.reverse();
+
+          // Starte die Haken-Animation und WARTE, bis sie fertig ist.
+          await _spotifySuccessController.forward().orCancel; // orCancel ist wichtig!
+
+          // 4. NACHDEM der Haken fertig ist, gehe zur Home-Seite.
+          if (mounted && _spotifySuccessController.status == AnimationStatus.completed) {
+             _setAppState(AppState.home);
+          }
+        }
+
       } catch (e) {
+        // 5. Fehler: Alles zurücksetzen (nur wenn noch mounted)
         if (mounted) {
           _colorTransitionController.reverse();
           _spotifyAuthController.reverse();
+          _spotifySuccessController.reset(); // Sicherstellen, dass Success zurückgesetzt wird
           _setAppState(AppState.welcome);
+           // Optional: Fehlermeldung anzeigen
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text('Spotify login failed: ${e.toString()}'))
+           );
         }
+      } finally {
+         // Sicherstellen, dass Controller zurückgesetzt werden, falls etwas schiefgeht
+         if (mounted && _appState != AppState.home) {
+             // Möglicherweise hier nichts tun oder nur bestimmte Controller zurücksetzen
+         }
       }
     } else {
-      _colorTransitionController.reverse();
-      _spotifyAuthController.reverse();
+      // User hat "Cancel" gedrückt
+      if (mounted) {
+          _colorTransitionController.reverse();
+          _spotifyAuthController.reverse();
+          _spotifySuccessController.reset(); // Auch hier zurücksetzen
+      }
     }
   }
+  // --- ENDE DER KORRIGIERTEN LOGIK ---
 
   @override
   Widget build(BuildContext context) {
     ValueNotifier<SwipeAction?>? swipeNotifier;
-    if (_appState == AppState.home) {
-      swipeNotifier = context.read<SpotifyDataProvider>().swipeActionNotifier;
+    // Sicherstellen, dass der Provider nur im home state gelesen wird und existiert
+    try {
+      if (_appState == AppState.home) {
+        swipeNotifier = context.read<SpotifyDataProvider>().swipeActionNotifier;
+      }
+    } catch (e) {
+       // Provider noch nicht verfügbar, ignoriere
+      swipeNotifier = null;
     }
+
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -122,32 +174,29 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
             time: _timeController,
             colorTransitionValue: _colorTransitionController.view,
             spotifyLogoCenterNotifier: _spotifyLogoCenterNotifier,
-            swipeActionNotifier: swipeNotifier,
+            // swipeNotifier sicher übergeben
+            swipeActionNotifier: swipeNotifier, // Kann null sein, wird im Widget geprüft
             backgroundMorphController: _backgroundMorphController,
             homeTransitionController: _homeController.view,
           ),
-          
-          // Der LogoChoreographer erhält jetzt den Notifier, um auf Seitenwechsel zu reagieren.
+
           LogoChoreographer(
             introController: _transitionController,
             spotifyController: _spotifyAuthController,
+            spotifySuccessController: _spotifySuccessController, // *** HIER KORRIGIERT ***
             authController: _authPageController,
             homeController: _homeController,
-            currentPageNotifier: _currentPageNotifier, // HIER WIRD DER STATE ÜBERGEBEN
+            currentPageNotifier: _currentPageNotifier,
             onCancelSpotify: () => _toggleSpotifyFlow(false),
             scrollController: _sharedScrollController,
           ),
 
-          // Der eigentliche UI-Inhalt
           _buildUIForState(),
         ],
       ),
     );
   }
 
-  // GEMERGT: Die UI-Building-Logik.
-  // Nutzt die saubere Struktur von 'incoming' und ergänzt die 'keys' von 'current',
-  // die für den AnimatedSwitcher wichtig sind.
   Widget _buildUIForState() {
     switch (_appState) {
       case AppState.login:
@@ -164,7 +213,6 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
           onComplete: () => _setAppState(AppState.home),
         );
       case AppState.home:
-        // Der MainScreen erhält den Notifier, um ihn bei Seitenwechsel zu aktualisieren.
         return MainScreen(
           transitionController: _homeController,
           currentPageNotifier: _currentPageNotifier,
