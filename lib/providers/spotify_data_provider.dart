@@ -30,6 +30,7 @@ class SpotifyDataProvider extends ChangeNotifier {
   String?  _swipTunePlaylistId;
   bool _isLoadingPlaylist = false;
   bool _isLoadingPlaylistTracks = false;
+  String? _playlistErrorMessage;
 
   List<FirebaseTrack> get tracks => _tracks;
   List<FirebaseTrack> get likedTracks => _likedTracks;
@@ -46,6 +47,7 @@ class SpotifyDataProvider extends ChangeNotifier {
   String? get swipTunePlaylistId => _swipTunePlaylistId;
   bool get isLoadingPlaylists => _isLoadingPlaylist;
   bool get isLoadingPlaylistTracks => _isLoadingPlaylistTracks;
+  String? get playlistErrorMessage => _playlistErrorMessage;
 
   late final ValueNotifier<SwipeAction?> _swipeActionNotifier;
   final ValueNotifier<double> swipeProgressNotifier = ValueNotifier(0.0);
@@ -75,22 +77,25 @@ class SpotifyDataProvider extends ChangeNotifier {
   //   }
   // }
   Future<void> loadUserPlaylists() async {
-  _isLoadingPlaylist = true;
-  notifyListeners();
+    _isLoadingPlaylist = true;
+    _playlistErrorMessage = null; // Reset error on new load
+    notifyListeners();
 
-  try {
-    if (_userPlaylists.isEmpty) {
-      _userPlaylists = await _playlistSerivce.getUserPlaylists();
+    try {
+      if (_userPlaylists.isEmpty) {
+        _userPlaylists = await _playlistSerivce.getUserPlaylists();
+      }
+
+      _isLoadingPlaylist = false;
+      notifyListeners();
+      loadAllPlaylistTracksInBackground();
+    } catch (e) {
+      print('❌ ERROR in loadUserPlaylists: $e'); // Critical log
+      _playlistErrorMessage = 'Failed to load playlists: $e';
+      _isLoadingPlaylist = false;
+      notifyListeners();
     }
-    
-    _isLoadingPlaylist = false;
-    notifyListeners();
-    loadAllPlaylistTracksInBackground();
-  } catch (e) {
-    _isLoadingPlaylist = false;
-    notifyListeners();
   }
-}
 Future<void> loadAllPlaylistTracksInBackground() async 
 {
     if (_isLoadingPlaylistTracks) return;

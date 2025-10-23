@@ -22,6 +22,7 @@ class LiquidGlassBackground extends StatefulWidget {
   final ValueNotifier<SwipeAction?>? swipeActionNotifier;
   final AnimationController? backgroundMorphController;
   final Animation<double>? homeTransitionController;
+  final Animation<double>? libraryMorphAnimation; // NEU
 
   const LiquidGlassBackground({
     super.key,
@@ -31,6 +32,7 @@ class LiquidGlassBackground extends StatefulWidget {
     this.swipeActionNotifier,
     this.backgroundMorphController,
     this.homeTransitionController,
+    this.libraryMorphAnimation,
   });
 
   @override
@@ -91,6 +93,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
       _swipeFeedbackController,
       if (widget.backgroundMorphController != null) widget.backgroundMorphController,
       if (widget.homeTransitionController != null) widget.homeTransitionController,
+      if (widget.libraryMorphAnimation != null) widget.libraryMorphAnimation,
       if (widget.swipeActionNotifier != null) widget.swipeActionNotifier,
       provider.swipeProgressNotifier,
     ].where((l) => l != null).cast<Listenable>().toList();
@@ -103,6 +106,12 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
         const repulsionRadius = 90.0;
         final morphValue = widget.backgroundMorphController?.value ?? 0.0;
         final homeTransition = widget.homeTransitionController?.value ?? 0.0;
+        final libraryMorph = widget.libraryMorphAnimation?.value ?? 0.0; // NEU
+
+        // WICHTIG: Die effektive "unten"-Position.
+        // homeTransition (1.0) - libraryMorph (0.0) = 1.0 (Blobs sind unten)
+        // homeTransition (1.0) - libraryMorph (1.0) = 0.0 (Blobs sind oben/frei)
+        final double effectiveHomeTransition = (homeTransition - libraryMorph).clamp(0.0, 1.0);
         
         final dragInfluence = provider.swipeProgressNotifier.value;
         final double likeGlow = (dragInfluence).clamp(0.0, 1.0);
@@ -171,7 +180,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
           final blob = _blobs[i];
           
           // ### LOGIK FÜR HOME-SCREEN (NACH DEM LOGIN) ###
-          if (homeTransition > 0.0) {
+          if (effectiveHomeTransition > 0.0) {
             // 1. ZIELPOSITION AM UNTEREN RAND (DIE "FALL-ANIMATION")
             final navBarY = size.height - 55 - (MediaQuery.of(context).padding.bottom);
             final targetPosition = Offset(
@@ -183,7 +192,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
             final lerpedPosition = Offset.lerp(currentPixelPosition, targetPosition, 0.05)!;
             
             // 2. GESCHWINDIGKEIT DÄMPFEN, WÄHREND SIE "FALLEN"
-            blob.velocity *= (1 - homeTransition * 0.2);
+            blob.velocity *= (1 - effectiveHomeTransition * 0.2);
             var newVelocity = blob.velocity;
 
             // 3. HORIZONTAL DRAG FOLLOW (Reagiert auf Karten-Swipe)

@@ -122,7 +122,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
       // Wenn der Provider *noch lädt* und wir noch nicht initialisiert haben,
       // und der Provider auch keine Tracks hat (z.B. beim allerersten Start),
       // dann triggern wir das Laden im Provider.
-      else if (provider.tracks.isEmpty && !_isQueueInitialized) {
+      else if (provider.tracks.isEmpty && !_isQueueInitialized &&!provider.isLoading) {
          print("⏳ Provider is still loading or has no tracks, triggering loadDiscoveryTracks..."); // Debug Print
          // Verzögert aufrufen, um Build-Konflikte zu vermeiden
          WidgetsBinding.instance.addPostFrameCallback((_) {

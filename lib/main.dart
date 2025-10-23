@@ -11,7 +11,6 @@ import 'package:swipetune/providers/user_provider.dart';
 import 'package:swipetune/screens/landing_screen.dart';
 import 'package:swipetune/screens/auth_page.dart';
 import 'package:swipetune/screens/library_screen.dart';
-import 'package:swipetune/screens/liked_songs_screen.dart';
 import 'package:swipetune/screens/main_screen.dart';
 import 'package:swipetune/screens/onboarding_screen.dart';
 import 'package:swipetune/screens/settings_screen.dart';
@@ -114,7 +113,6 @@ class SwipetuneApp extends StatelessWidget {
         '/landing': (context) => const LandingScreen(),
         '/library': (context) => const LibraryScreen(),
         '/settings': (context) => const SettingsScreen(),
-        '/liked_songs': (context) => const LikedSongsScreen(),
 
       },
     );

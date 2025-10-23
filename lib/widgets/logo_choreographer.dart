@@ -53,9 +53,22 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
 
   void _onScroll() {
     if (widget.scrollController != null && mounted) {
-      setState(() {
-        _scrollOffset = widget.scrollController!.offset;
-      });
+
+      // NEUE PRÜFUNG:
+      final position = widget.scrollController!.position;
+      if (position.maxScrollExtent > 0) {
+        // Nur scrollen, wenn es Inhalt zum Scrollen gibt
+        setState(() {
+          _scrollOffset = position.pixels;
+        });
+      } else {
+        // Wenn nicht scrollbar, Header in den "ungescrollten" Zustand zurücksetzen
+        if (_scrollOffset != 0.0) {
+          setState(() {
+            _scrollOffset = 0.0;
+          });
+        }
+      }
     }
   }
 

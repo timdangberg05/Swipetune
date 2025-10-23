@@ -6,6 +6,7 @@ import '../widgets/liquid_nav_bar.dart';
 // import '../widgets/header_scroll_handler.dart'; // HeaderScrollHandler wird jetzt vom LogoChoreographer übernommen
 import '../widgets/liquid_background.dart';
 import '../widgets/logo_choreographer.dart';
+import '../widgets/library/library_header_choreographer.dart';
 import '../providers/spotify_data_provider.dart';
 import 'library_screen.dart';
 import 'settings_screen.dart';
@@ -47,6 +48,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   late AnimationController _dummyAuthController;
   late AnimationController _dummySpotifySuccessController; // *** HIER KORRIGIERT ***
 
+  // Library Morph Controller
+  late AnimationController _libraryMorphController;
+  final ValueNotifier<bool> isLibraryDetailVisible = ValueNotifier(false);
+
   final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
   bool _isAnimatingToPage = false;
   int? _targetPage;
@@ -71,6 +76,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     _dummySpotifyController = AnimationController(vsync: this, value: 0.0); // Spotify nicht aktiv
     _dummyAuthController = AnimationController(vsync: this, value: 0.0); // Auth nicht aktiv
     _dummySpotifySuccessController = AnimationController(vsync: this, value: 0.0); // Success nicht aktiv *** HIER KORRIGIERT ***
+
+    // Library Morph Controller initialisieren
+    _libraryMorphController = AnimationController(
+      duration: const Duration(milliseconds: 600), // Dauer für das Aufsteigen
+      vsync: this,
+    );
 
     _navBarController = AnimationController(
       duration: const Duration(milliseconds: 100), // Schnellere Reaktion
@@ -156,6 +167,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     _dummySpotifyController.dispose();
     _dummyAuthController.dispose();
     _dummySpotifySuccessController.dispose(); // *** HIER KORRIGIERT ***
+    _libraryMorphController.dispose();
     // Nur den lokalen ScrollController entsorgen, wenn er erstellt wurde
     if (widget.sharedScrollController == null) {
       _scrollController.dispose();
@@ -190,6 +202,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             swipeActionNotifier: provider?.swipeActionNotifier,
             homeTransitionController: widget.transitionController.view, // .view für Animation<double>
              // backgroundMorphController nicht benötigt hier, kann null sein
+            libraryMorphAnimation: _libraryMorphController.view,
           ),
 
           // Scroll-Listener für Navbar in Settings
@@ -235,7 +248,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     return const SwipeHomePage();
                   case 1:
                     // LibraryScreen erhält den ScrollController
-                    return LibraryScreen(scrollController: _scrollController);
+                    return LibraryScreen(
+                      scrollController: _scrollController, 
+                      libraryMorphController: _libraryMorphController,
+                      isDetailViewNotifier: isLibraryDetailVisible, // <-- NEU
+                    );
                   case 2:
                     // TODO: Likes Page implementieren
                     return const Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)));
@@ -250,15 +267,29 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
 
           // Logo/Header Choreographer
-          LogoChoreographer(
-            introController: _dummyIntroController,
-            spotifyController: _dummySpotifyController,
-            spotifySuccessController: _dummySpotifySuccessController, // *** HIER KORRIGIERT ***
-            authController: _dummyAuthController,
-            homeController: widget.transitionController, // Der echte Home-Controller
-            onCancelSpotify: () {}, // Irrelevant im Home-Zustand
-            currentPageNotifier: widget.currentPageNotifier,
-            scrollController: _scrollController, // Den verwendeten ScrollController übergeben
+          ValueListenableBuilder<bool>(
+            valueListenable: isLibraryDetailVisible,
+            builder: (context, isDetailVisible, child) {
+              return IgnorePointer(
+                ignoring: isDetailVisible,
+                child: AnimatedOpacity(
+                  opacity: isDetailVisible ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  child: child,
+                ),
+              );
+            },
+            child: LogoChoreographer(
+              introController: _dummyIntroController,
+              spotifyController: _dummySpotifyController,
+              spotifySuccessController: _dummySpotifySuccessController,
+              authController: _dummyAuthController,
+              homeController: widget.transitionController,
+              onCancelSpotify: () {},
+              currentPageNotifier: widget.currentPageNotifier,
+              scrollController: _scrollController,
+            ),
           ),
 
           // Animierte Navigationsleiste
