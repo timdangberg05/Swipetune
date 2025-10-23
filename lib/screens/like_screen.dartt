@@ -1,0 +1,572 @@
+// liked_tracks_page.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'dart:ui';
+import '../providers/spotify_data_provider.dart';
+import '../models/firebasemodels/firebase_track_model.dart';
+
+class LikedTracksPage extends StatefulWidget {
+  final ScrollController? scrollController;
+  
+  const LikedTracksPage({super.key, this.scrollController});
+
+  @override
+  State<LikedTracksPage> createState() => _LikedTracksPageState();
+}
+
+class _LikedTracksPageState extends State<LikedTracksPage> {
+  late ScrollController _scrollController;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedTrackIds = {};
+  
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = widget.scrollController ?? ScrollController();
+  }
+  
+  @override
+  void dispose() {
+    if (widget.scrollController == null) {
+      _scrollController.dispose();
+    }
+    super.dispose();
+  }
+  
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedTrackIds.clear();
+      }
+    });
+  }
+  
+  void _toggleTrackSelection(String trackId) {
+    setState(() {
+      if (_selectedTrackIds.contains(trackId)) {
+        _selectedTrackIds.remove(trackId);
+      } else {
+        _selectedTrackIds.add(trackId);
+      }
+    });
+  }
+  
+  Future<void> _createPlaylistFromSelected(BuildContext context) async {
+    if (_selectedTrackIds.isEmpty) return;
+    
+    final provider = context.read<SpotifyDataProvider>();
+    final selectedTracks = provider.likedTracks
+        .where((track) => _selectedTrackIds.contains(track.id))
+        .toList();
+    
+    final playlistName = await _showPlaylistNameDialog(context);
+    if (playlistName == null || playlistName.isEmpty) return;
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Creating playlist...'),
+            ],
+          ),
+          backgroundColor: Colors.black87,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 30),
+        ),
+      );
+    }
+    
+    try {
+      final userId = await _getUserId(context);
+      
+      if (userId == null) {
+        throw Exception('User ID not found');
+      }
+      
+      await provider.createCustomPlaylist(
+        userId: userId,
+        playlistName: playlistName,
+        trackIds: selectedTracks.map((t) => t.id).toList(),
+      );
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Playlist "$playlistName" created with ${selectedTracks.length} tracks!',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.withOpacity(0.9),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
+      _toggleSelectionMode();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red.withOpacity(0.9),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String?> _getUserId(BuildContext context) async {
+    return 'user_id_placeholder';
+  }
+  
+  Future<String?> _showPlaylistNameDialog(BuildContext context) {
+    final controller = TextEditingController(text: 'SwipeTune Selection');
+    
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.black.withOpacity(0.9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Playlist Name', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter playlist name',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.white),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Create', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(int durationMs) {
+    final duration = Duration(milliseconds: durationMs);
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Consumer<SpotifyDataProvider>(
+        builder: (context, provider, child) {
+          final likedTracks = provider.likedTracks;
+          
+          if (likedTracks.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.favorite_border,
+                    size: 80,
+                    color: Colors.white.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No liked tracks yet',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start swiping to discover music!',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          
+          return Stack(
+            children: [
+              CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  // Only selection count at top right
+                  if (_isSelectionMode)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.blue.withOpacity(0.5),
+                                ),
+                              ),
+                              child: Text(
+                                '${_selectedTrackIds.length} selected',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 80),
+                    ),
+                  
+                  // List of tracks
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final track = likedTracks[index];
+                          final isSelected = _selectedTrackIds.contains(track.id);
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: LikedTrackListItem(
+                              track: track,
+                              isSelectionMode: _isSelectionMode,
+                              isSelected: isSelected,
+                              duration: _formatDuration(track.durationMs),
+                              onLongPress: () {
+                                if (!_isSelectionMode) {
+                                  _toggleSelectionMode();
+                                  _toggleTrackSelection(track.id);
+                                }
+                              },
+                              onTap: () {
+                                if (_isSelectionMode) {
+                                  _toggleTrackSelection(track.id);
+                                }
+                              },
+                            ),
+                          );
+                        },
+                        childCount: likedTracks.length,
+                      ),
+                    ),
+                  ),
+                  
+                  // Bottom padding to avoid taskbar overlap
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 180),
+                  ),
+                ],
+              ),
+              
+              // Bottom action buttons - positioned ABOVE taskbar
+              if (_isSelectionMode)
+                Positioned(
+                  bottom: 120, // Above the taskbar
+                  left: 24,
+                  right: 24,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GlassActionButton(
+                          icon: Icons.close,
+                          label: 'Cancel',
+                          onPressed: _toggleSelectionMode,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 2,
+                        child: GlassActionButton(
+                          icon: Icons.playlist_add,
+                          label: 'Playlist (${_selectedTrackIds.length})',
+                          onPressed: _selectedTrackIds.isEmpty
+                              ? null
+                              : () => _createPlaylistFromSelected(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Glass list item widget
+class LikedTrackListItem extends StatefulWidget {
+  final FirebaseTrack track;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final String duration;
+  final VoidCallback onLongPress;
+  final VoidCallback onTap;
+
+  const LikedTrackListItem({
+    super.key,
+    required this.track,
+    required this.isSelectionMode,
+    required this.isSelected,
+    required this.duration,
+    required this.onLongPress,
+    required this.onTap,
+  });
+
+  @override
+  State<LikedTrackListItem> createState() => _LikedTrackListItemState();
+}
+
+class _LikedTrackListItemState extends State<LikedTrackListItem> {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? Colors.blue.withOpacity(0.25)
+                  : Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: widget.isSelected
+                    ? Colors.blue.withOpacity(0.6)
+                    : Colors.white.withOpacity(0.2),
+                width: widget.isSelected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Album cover
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    widget.track.albumImageUrl,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 56,
+                        height: 56,
+                        color: Colors.grey.shade800,
+                        child: const Icon(
+                          Icons.music_note,
+                          size: 28,
+                          color: Colors.white30,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Track info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.track.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.track.primaryArtistName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Duration
+                Text(
+                  widget.duration,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.6),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // Selection indicator
+                if (widget.isSelectionMode)
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.isSelected
+                          ? Colors.blue
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: widget.isSelected
+                            ? Colors.blue
+                            : Colors.white.withOpacity(0.5),
+                        width: 2,
+                      ),
+                    ),
+                    child: widget.isSelected
+                        ? const Icon(
+                            Icons.check,
+                            size: 16,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Glass action button
+class GlassActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  const GlassActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onPressed != null;
+    
+    return GestureDetector(
+      onTap: onPressed,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: isEnabled
+                  ? Colors.white.withOpacity(0.15)
+                  : Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: isEnabled 
+                      ? Colors.white 
+                      : Colors.white.withOpacity(0.4),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isEnabled 
+                        ? Colors.white 
+                        : Colors.white.withOpacity(0.4),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

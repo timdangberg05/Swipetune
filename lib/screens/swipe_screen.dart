@@ -82,7 +82,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
     // --- ANGEPASSTE INITIALISIERUNG ---
     // Läuft nur EINMAL, wenn die Queue noch nicht initialisiert ist.
     if (!_isQueueInitialized) {
-      final provider = context.watch<SpotifyDataProvider>();
+      final provider = context.read<SpotifyDataProvider>();
 
       // Hol den DiscoveryService hier, da context jetzt sicher ist
       // Stelle sicher, dass DiscoveryService im Provider-Setup in main.dart verfügbar ist
@@ -96,7 +96,7 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
 
 
       // Prüfe, ob der Ladevorgang des Providers abgeschlossen ist.
-      if (!provider.isLoading) {
+      if (!provider.isLoading && provider.tracks.isNotEmpty) {
         print("🚀 Provider finished loading. Initializing UI State..."); // Debug Print
         // Verwende addPostFrameCallback, um setState außerhalb des Builds sicher aufzurufen
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -122,11 +122,11 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
       // Wenn der Provider *noch lädt* und wir noch nicht initialisiert haben,
       // und der Provider auch keine Tracks hat (z.B. beim allerersten Start),
       // dann triggern wir das Laden im Provider.
-      else if (provider.tracks.isEmpty && !_isQueueInitialized &&!provider.isLoading) {
+      else if (provider.tracks.isEmpty  &&provider.isLoading) {
          print("⏳ Provider is still loading or has no tracks, triggering loadDiscoveryTracks..."); // Debug Print
          // Verzögert aufrufen, um Build-Konflikte zu vermeiden
          WidgetsBinding.instance.addPostFrameCallback((_) {
-             if (mounted) {
+             if (mounted && !_isQueueInitialized) {
                  // Verwende read, um nicht auf Änderungen hier zu lauschen
                  context.read<SpotifyDataProvider>().loadDiscoveryTracks();
              }
