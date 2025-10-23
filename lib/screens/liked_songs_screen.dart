@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
-import 'package:swipetune/models/Track.dart';
+import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
 import 'package:swipetune/models/personal_album.dart';
 import 'package:swipetune/providers/spotify_data_provider.dart';
 import 'package:swipetune/services/library_service.dart';
@@ -125,7 +125,7 @@ class _LikedSongsScreenState extends State<LikedSongsScreen> with TickerProvider
                 right: horizontalPadding,
                 bottom: bottomPadding,
               ),
-              sliver: Selector<SpotifyDataProvider, List<Track>>(
+              sliver: Selector<SpotifyDataProvider, List<FirebaseTrack>>(
                 selector: (_, provider) => provider.likedTracks,
                 builder: (context, tracks, _) {
                   if (tracks.isEmpty) {
@@ -176,7 +176,7 @@ class _LikedSongsScreenState extends State<LikedSongsScreen> with TickerProvider
 
 // Modified SongItem to include menu for adding to albums
 class SongItemWithMenu extends StatelessWidget {
-  final Track track;
+  final FirebaseTrack track;
   final int index;
   final ScrollController scrollController;
 

@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'swipe_screen.dart';
 import '../widgets/liquid_nav_bar.dart';
-import '../widgets/header_scroll_handler.dart';
+// import '../widgets/header_scroll_handler.dart'; // HeaderScrollHandler wird jetzt vom LogoChoreographer übernommen
 import '../widgets/liquid_background.dart';
 import '../widgets/logo_choreographer.dart';
 import '../providers/spotify_data_provider.dart';
 import 'library_screen.dart';
 import 'settings_screen.dart';
+
+// Stelle sicher, dass SwipeAction definiert ist (z.B. in spotify_data_provider.dart)
+// enum SwipeAction { like, dislike }
 
 class MainScreen extends StatefulWidget {
   final AnimationController transitionController;
@@ -26,109 +29,121 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
+// ValueNotifier für den Navbar-Fortschritt (kann global oder hier sein)
 ValueNotifier<double> navBarProgressNotifier = ValueNotifier<double>(0.0);
 
 class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
-  final ScrollController _scrollController = ScrollController();
+  // Verwende sharedScrollController, wenn vorhanden, sonst einen lokalen
+  late ScrollController _scrollController;
   Timer? _debounce;
   late AnimationController _navBarController;
   late Animation<Offset> _navBarAnimation;
   late AnimationController _backgroundTimeController;
+
+  // Dummy-Controller für LogoChoreographer im Home-Zustand
   late AnimationController _dummyIntroController;
   late AnimationController _dummySpotifyController;
   late AnimationController _dummyAuthController;
+  late AnimationController _dummySpotifySuccessController; // *** HIER KORRIGIERT ***
+
   final ValueNotifier<Offset?> _spotifyLogoCenterNotifier = ValueNotifier(null);
   bool _isAnimatingToPage = false;
   int? _targetPage;
-  bool _isNavBarVisible = true;
+  // bool _isNavBarVisible = true; // Wird jetzt durch _navBarController.value gesteuert
   double _lastScrollOffset = 0.0;
 
   @override
   void initState() {
     super.initState();
-    widget.transitionController.forward();
+    // Verwende sharedScrollController oder erstelle einen neuen
+    _scrollController = widget.sharedScrollController ?? ScrollController();
 
-    // Initialize background animation controller
+    // widget.transitionController.forward(); // Wird bereits im LandingScreen gestartet
+
     _backgroundTimeController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 100),
     )..repeat();
 
-    // Initialize dummy controllers for LogoChoreographer (already in home state)
-    _dummyIntroController = AnimationController(vsync: this, value: 1.0);
-    _dummySpotifyController = AnimationController(vsync: this, value: 0.0);
-    _dummyAuthController = AnimationController(vsync: this, value: 0.0);
+    // Dummy-Controller initialisieren
+    _dummyIntroController = AnimationController(vsync: this, value: 1.0); // Intro ist fertig
+    _dummySpotifyController = AnimationController(vsync: this, value: 0.0); // Spotify nicht aktiv
+    _dummyAuthController = AnimationController(vsync: this, value: 0.0); // Auth nicht aktiv
+    _dummySpotifySuccessController = AnimationController(vsync: this, value: 0.0); // Success nicht aktiv *** HIER KORRIGIERT ***
 
-    // Aufbau Animation Controller für Navbar - More responsive like Dynamic Island
     _navBarController = AnimationController(
-      duration: const Duration(milliseconds: 100), // Faster response
+      duration: const Duration(milliseconds: 100), // Schnellere Reaktion
       vsync: this,
     );
 
     _navBarAnimation = Tween<Offset>(
       begin: Offset.zero,
-      end: const Offset(0.0, 1.0),
+      end: const Offset(0.0, 1.0), // Nach unten ausblenden
     ).animate(CurvedAnimation(
       parent: _navBarController,
-      curve: Curves.fastOutSlowIn, // More dynamic curve like Dynamic Island
+      curve: Curves.fastOutSlowIn,
     ));
 
-
-    // Listener for page changes to reset navbar visibility on certain pages
     widget.currentPageNotifier.addListener(_onPageChanges);
-
-    // Sync navbar controller with navBarProgressNotifier from settings screen
     navBarProgressNotifier.addListener(_onNavProgressChanged);
-  }
-
-
-
-  void _hideNavBar() {
-    setState(() {
-      _isNavBarVisible = false;
-    });
-    _navBarController.forward();
-  }
-
-  void _showNavBar() {
-    setState(() {
-      _isNavBarVisible = true;
-    });
-    _navBarController.reverse();
   }
 
   void _onPageChanges() {
     int page = widget.currentPageNotifier.value;
-    // Bei Page-Wechsel, Navbar immer wieder zeigen (außer evtl. bei Settings wenn scrolled)
-    // Für Settings, starten wir als sichtbar
-    if (page == 3) {
-      _navBarController.animateTo(0.0, duration: Duration(milliseconds: 300));
-    } else {
-      _navBarController.animateTo(0.0, duration: Duration(milliseconds: 300));
+    // Wenn die Seite wechselt UND der PageController nicht bereits auf dieser Seite ist
+    if (_pageController.hasClients && (_pageController.page?.round() ?? 0) != page) {
+      _pageController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+      );
     }
+     // Navbar beim Seitenwechsel immer anzeigen (außer evtl. bei Settings)
+     // Wenn die Seite NICHT Settings ist, zeige die Navbar sofort an
+     if (page != 3) {
+        _showNavBar();
+     } else {
+       // Wenn es Settings ist, setze den Fortschritt basierend auf dem aktuellen Scroll-Offset zurück
+       _navBarController.value = navBarProgressNotifier.value;
+     }
   }
 
   void _onNavProgressChanged() {
-    _navBarController.value = navBarProgressNotifier.value;
+    // Nur aktualisieren, wenn die aktuelle Seite Settings ist
+    if (widget.currentPageNotifier.value == 3) {
+      _navBarController.value = navBarProgressNotifier.value;
+    }
   }
 
+  void _showNavBar() {
+    if (_navBarController.status != AnimationStatus.dismissed) {
+      _navBarController.reverse();
+    }
+  }
+
+  void _hideNavBar() {
+     if (_navBarController.status != AnimationStatus.completed) {
+      _navBarController.forward();
+    }
+  }
+
+
+  // Wird vom PageView aufgerufen, wenn der Benutzer wischt
   void _onPageSwiped(int page) {
-    // When the user swipes, we update the central state
-    widget.currentPageNotifier.value = page;
+    // Aktualisiere den zentralen Notifier, wenn der Benutzer wischt
+    if (widget.currentPageNotifier.value != page) {
+        widget.currentPageNotifier.value = page;
+         // _onPageChanges wird dadurch ausgelöst und kümmert sich um die Navbar
+    }
   }
 
+  // Wird aufgerufen, wenn auf ein Navigationsleisten-Item getippt wird
   void _onNavItemTapped(int index) {
     if (widget.currentPageNotifier.value == index) return;
-    
-    // When a nav item is tapped, we also update the central state.
+    // Aktualisiere den zentralen Notifier, dies löst _onPageChanges aus
     widget.currentPageNotifier.value = index;
-
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOutCubic,
-    );
+     // _onPageChanges kümmert sich um das Blättern im PageView und die Navbar
   }
 
   @override
@@ -140,82 +155,118 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     _dummyIntroController.dispose();
     _dummySpotifyController.dispose();
     _dummyAuthController.dispose();
-    _scrollController.dispose();
+    _dummySpotifySuccessController.dispose(); // *** HIER KORRIGIERT ***
+    // Nur den lokalen ScrollController entsorgen, wenn er erstellt wurde
+    if (widget.sharedScrollController == null) {
+      _scrollController.dispose();
+    }
     _pageController.dispose();
     _debounce?.cancel();
+    _spotifyLogoCenterNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SpotifyDataProvider>();
-    
+    // Den Provider sicher abrufen
+    SpotifyDataProvider? provider;
+    try {
+      provider = context.watch<SpotifyDataProvider>();
+    } catch(e) {
+      provider = null; // Falls Provider noch nicht bereit
+    }
+
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Add LiquidGlassBackground for the swipe screen
+          // LiquidGlassBackground für den Home-Zustand
           LiquidGlassBackground(
             time: _backgroundTimeController,
-            colorTransitionValue: AlwaysStoppedAnimation(0.0),
+            colorTransitionValue: const AlwaysStoppedAnimation(0.0), // Keine Farbtransition hier
             spotifyLogoCenterNotifier: _spotifyLogoCenterNotifier,
-            swipeActionNotifier: provider.swipeActionNotifier,
-            homeTransitionController: widget.transitionController,
+            // SwipeNotifier nur übergeben, wenn Provider existiert
+            swipeActionNotifier: provider?.swipeActionNotifier,
+            homeTransitionController: widget.transitionController.view, // .view für Animation<double>
+             // backgroundMorphController nicht benötigt hier, kann null sein
           ),
+
+          // Scroll-Listener für Navbar in Settings
           NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification notification) {
+              // Nur auf ScrollUpdates auf der Settings-Seite (Index 3) reagieren
               if (notification is ScrollUpdateNotification &&
                   widget.currentPageNotifier.value == 3 &&
                   notification.metrics.axis == Axis.vertical) {
+
                 final offset = notification.metrics.pixels;
                 final delta = offset - _lastScrollOffset;
-                if (_navBarController.isAnimating) _navBarController.stop();
-                // Up scroll (negative delta) increases hide progress (navBar moves down)
-                if (delta < 0) {
-                  _navBarController.value = (_navBarController.value + delta.abs() * 0.05).clamp(0.0, 1.0);
-                } else if (delta > 0) {
-                  // Down scroll decreases hide progress (navBar moves up)
-                  _navBarController.value = (_navBarController.value - delta * 0.05).clamp(0.0, 1.0);
+                // Verhindere Sprünge während der Animation
+                 if (_navBarController.isAnimating) _navBarController.stop();
+
+                // Scrollen nach unten (delta > 0) -> Navbar verstecken (value -> 1.0)
+                if (delta > 0 && offset > 10) { // Kleine Toleranz am Anfang
+                   _navBarController.value = (_navBarController.value + delta * 0.005).clamp(0.0, 1.0);
                 }
+                // Scrollen nach oben (delta < 0) -> Navbar zeigen (value -> 0.0)
+                else if (delta < 0) {
+                   _navBarController.value = (_navBarController.value + delta * 0.005).clamp(0.0, 1.0);
+                }
+
                 _lastScrollOffset = offset;
+                // Synchronisiere den externen Notifier
                 navBarProgressNotifier.value = _navBarController.value;
               }
-              return false;
+               // Falls der User ganz nach oben scrollt in Settings
+               else if (notification is ScrollEndNotification && widget.currentPageNotifier.value == 3 && notification.metrics.pixels <= 10) {
+                 _showNavBar();
+                 navBarProgressNotifier.value = 0.0;
+               }
+              return false; // Weiterleiten der Notification
             },
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: _onPageSwiped,
-              itemCount: 4,
+              itemCount: 4, // Anzahl der Seiten
               itemBuilder: (context, index) {
                 switch (index) {
                   case 0:
                     return const SwipeHomePage();
                   case 1:
-                    return LibraryScreen(scrollController: widget.sharedScrollController ?? _scrollController);
+                    // LibraryScreen erhält den ScrollController
+                    return LibraryScreen(scrollController: _scrollController);
                   case 2:
+                    // TODO: Likes Page implementieren
                     return const Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)));
                   case 3:
-                    return SettingsScreen(scrollController: widget.sharedScrollController ?? _scrollController, navBarProgress: navBarProgressNotifier);
+                    // SettingsScreen erhält den ScrollController und den Navbar-Notifier
+                    return SettingsScreen(scrollController: _scrollController, navBarProgress: navBarProgressNotifier);
                   default:
-                    return const SizedBox();
+                    return const SizedBox.shrink(); // Fallback
                 }
               },
             ),
           ),
-          // Add back the header
+
+          // Logo/Header Choreographer
           LogoChoreographer(
             introController: _dummyIntroController,
             spotifyController: _dummySpotifyController,
+            spotifySuccessController: _dummySpotifySuccessController, // *** HIER KORRIGIERT ***
             authController: _dummyAuthController,
-            homeController: widget.transitionController,
-            onCancelSpotify: () {},
+            homeController: widget.transitionController, // Der echte Home-Controller
+            onCancelSpotify: () {}, // Irrelevant im Home-Zustand
             currentPageNotifier: widget.currentPageNotifier,
-            scrollController: widget.sharedScrollController ?? _scrollController,
+            scrollController: _scrollController, // Den verwendeten ScrollController übergeben
           ),
+
+          // Animierte Navigationsleiste
           SlideTransition(
             position: _navBarAnimation,
             child: Align(
               alignment: Alignment.bottomCenter,
+              // Höre auf den zentralen currentPageNotifier, um die Auswahl zu aktualisieren
               child: ValueListenableBuilder<int>(
                 valueListenable: widget.currentPageNotifier,
                 builder: (context, currentPage, child) {
@@ -223,6 +274,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     selectedIndex: currentPage,
                     onTabTapped: _onNavItemTapped,
                     animation: widget.transitionController.view,
+                    // Die Animation der Navbar selbst wird nicht mehr benötigt hier
+                    // animation: widget.transitionController.view, // Entfernt
                   );
                 },
               ),

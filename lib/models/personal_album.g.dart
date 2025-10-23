@@ -1,4 +1,4 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
+// GENERATED CLAUDE CODE - DO NOT MODIFY BY HAND
 
 part of 'personal_album.dart';
 

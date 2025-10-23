@@ -7,6 +7,7 @@ import 'package:swipetune/widgets/auth_widgets.dart';
 class LogoChoreographer extends StatefulWidget {
   final AnimationController introController;
   final AnimationController spotifyController;
+  final AnimationController spotifySuccessController; // NEU
   final AnimationController authController;
   final AnimationController homeController;
   final VoidCallback onCancelSpotify;
@@ -17,6 +18,7 @@ class LogoChoreographer extends StatefulWidget {
     super.key,
     required this.introController,
     required this.spotifyController,
+    required this.spotifySuccessController, // NEU
     required this.authController,
     required this.homeController,
     required this.onCancelSpotify,
@@ -68,12 +70,10 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
     final authCurve = CurvedAnimation(parent: widget.authController, curve: Curves.easeInOutCubic);
     final homeCurve = CurvedAnimation(parent: widget.homeController, curve: Curves.easeInOutCubic);
 
-    // --- Positional & Size Animations (Restored to original logic) ---
+    // --- Positional & Size Animations ---
     final introY = Tween<double>(begin: size.height / 2 - 40, end: size.height * 0.25).animate(introCurve);
     final spotifyY = Tween<double>(begin: size.height * 0.25, end: size.height * 0.35).animate(spotifyCurve);
     final authY = Tween<double>(begin: size.height * 0.25, end: size.height * 0.15).animate(authCurve);
-
-    // The final Y position is now consistent, preventing jumps.
     final homeY = Tween<double>(begin: size.height * 0.35, end: safeArea.top + 16).animate(homeCurve);
 
     final logoSize = Tween<double>(begin: 80.0, end: 60.0).animate(introCurve);
@@ -82,15 +82,21 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
     final panelFade = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: widget.spotifyController, curve: const Interval(0.7, 1.0)));
 
     return AnimatedBuilder(
-      animation: Listenable.merge([widget.introController, widget.spotifyController, widget.authController, widget.homeController, widget.currentPageNotifier]),
+      animation: Listenable.merge([
+        widget.introController,
+        widget.spotifyController,
+        widget.authController,
+        widget.homeController,
+        widget.currentPageNotifier,
+        widget.spotifySuccessController // NEU
+      ]),
       builder: (context, child) {
         double y;
         double sizeValue;
 
-
         if (widget.homeController.value > 0) {
           y = homeY.value;
-        } else if (widget.spotifyController.value > 0) {
+        } else if (widget.spotifyController.value > 0) { // Bleibt auf der Spotify-Y-Position
           y = spotifyY.value;
         } else if (widget.authController.value > 0) {
           y = authY.value;
@@ -98,36 +104,49 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
           y = introY.value;
         }
 
-        // Determine size based on the current app state
         sizeValue = widget.homeController.value > 0 ? homeLogoSize.value : logoSize.value;
 
-        final isSpotifyVisible = widget.spotifyController.value > 0 && widget.homeController.value == 0;
+        // --- NEUE STATE-LOGIK ---
         final isHomeVisible = widget.homeController.value > 0;
+        // Zeigt Haken-Animation, wenn successController läuft
+        final isSpotifySuccess = widget.spotifySuccessController.value > 0 && !isHomeVisible;
+        // Zeigt "Connecting"-Logo, wenn spotifyController läuft, aber Haken-Anim noch nicht
+        final isSpotifyConnecting = widget.spotifyController.value > 0 && !isSpotifySuccess && !isHomeVisible;
+        // --- ENDE NEUE STATE-LOGIK ---
 
         return Stack(
-          // Using ignorePointer to prevent interaction with invisible elements.
           children: [
-            // --- The Single, Evolving Header ---
             Positioned(
               top: y,
               left: 0,
               right: 0,
-              child: _buildEvolvingHeader(context, isSpotifyVisible, isHomeVisible, sizeValue, widget.currentPageNotifier.value),
+              child: _buildEvolvingHeader(
+                context,
+                isSpotifyConnecting,
+                isSpotifySuccess, // NEU
+                isHomeVisible,
+                sizeValue,
+                widget.currentPageNotifier.value,
+              ),
             ),
 
             // --- Spotify Connecting Panel ---
-            // Fades out smoothly as the home screen appears.
             Positioned(
               top: size.height * 0.35 + 120,
               left: 0,
               right: 0,
               child: IgnorePointer(
-                ignoring: widget.homeController.value > 0,
+                ignoring: widget.homeController.value > 0 || widget.spotifySuccessController.value > 0,
                 child: FadeTransition(
+                  // Fadet aus, wenn Home-Anim startet
                   opacity: Tween<double>(begin: 1.0, end: 0.0).animate(widget.homeController),
                   child: FadeTransition(
-                    opacity: panelFade,
-                  child: SpotifyLoginPanel(onCancel: widget.onCancelSpotify),
+                    // Fadet auch aus, wenn Haken-Anim startet
+                    opacity: Tween<double>(begin: 1.0, end: 0.0).animate(widget.spotifySuccessController),
+                    child: FadeTransition(
+                      opacity: panelFade,
+                      child: SpotifyLoginPanel(onCancel: widget.onCancelSpotify),
+                    ),
                   ),
                 ),
               ),
@@ -138,16 +157,89 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
     );
   }
 
-  // This single helper builds the correct header based on the app's state.
-  Widget _buildEvolvingHeader(BuildContext context, bool isSpotify, bool isHome, double size, int currentPage) {
-    if (isHome) {
+  // --- NEUE FUNKTION: Baut die Haken-Animation ---
+  Widget _buildSuccessCheckmark(double baseSize) {
+    final anim = CurvedAnimation(parent: widget.spotifySuccessController, curve: Curves.easeInOutCubic);
+    
+    // 0.0s - 0.8s: Logos bewegen sich zur Mitte
+    final mergeTween = Tween<double>(begin: 40.0, end: 0.0).animate(
+      CurvedAnimation(parent: anim, curve: const Interval(0.0, 0.4, curve: Curves.easeInOutCubic))
+    );
+    
+    // 0.3s - 0.6s: Logos blenden aus
+    final logoFadeOut = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: anim, curve: const Interval(0.15, 0.3, curve: Curves.easeOut))
+    );
+    
+    // 0.6s - 1.4s: Haken skaliert "elastisch" rein
+    final checkScale = Tween<double>(begin: 0.2, end: 1.0).animate(
+      CurvedAnimation(parent: anim, curve: const Interval(0.3, 0.7, curve: Curves.elasticOut))
+    );
+    
+    // 0.6s - 1.0s: Haken blendet ein
+    final checkFadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: anim, curve: const Interval(0.3, 0.5, curve: Curves.easeIn))
+    );
 
+    return Stack(
+      key: const ValueKey('success-anim'),
+      alignment: Alignment.center,
+      children: [
+        // Die zwei Logos, die verschmelzen
+        FadeTransition(
+          opacity: logoFadeOut,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Transform.translate(
+                offset: Offset(-mergeTween.value, 0),
+                child: Icon(Icons.waves_rounded, color: Colors.white, size: baseSize),
+              ),
+              Transform.translate(
+                offset: Offset(mergeTween.value, 0),
+                child: FaIcon(FontAwesomeIcons.spotify, color: const Color(0xFF1DB945), size: baseSize),
+              ),
+            ],
+          ),
+        ),
+        
+        // Der Haken, der erscheint
+        FadeTransition(
+          opacity: checkFadeIn,
+          child: ScaleTransition(
+            scale: checkScale,
+            child: Icon(
+              Icons.check_circle_rounded,
+              color: const Color(0xFF1DB954), // Spotify-Grün für Erfolg
+              size: baseSize * 1.2, // Etwas größer
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5)
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // --- ENDE NEUE FUNKTION ---
+
+
+  Widget _buildEvolvingHeader(BuildContext context, bool isSpotifyConnecting, bool isSpotifySuccess, bool isHome, double size, int currentPage) {
+    if (isHome) {
       return _buildMorphingHomeHeader(size, currentPage);
     }
 
-    // This part remains unchanged for the perfect intro/spotify animation
     Widget content;
-    if (isSpotify) {
+    
+    if (isSpotifySuccess) {
+      // NEU: Zeige die Haken-Animation
+      content = _buildSuccessCheckmark(size);
+    } else if (isSpotifyConnecting) {
+      // Unverändert: "Connecting"-Animation
       final xFade = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: widget.spotifyController, curve: const Interval(0.4, 0.9)));
       final swipetuneMoveX = Tween<double>(begin: 0, end: -40).animate(widget.spotifyController);
       content = Row(
@@ -160,39 +252,49 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
         ],
       );
     } else {
+      // Unverändert: Intro-Logo
       content = Icon(Icons.waves_rounded, key: const ValueKey('intro-logo'), color: Colors.white, size: size);
     }
-    return AnimatedSwitcher(duration: const Duration(milliseconds: 400), child: content);
+    
+    // AnimatedSwitcher sorgt für den nahtlosen Übergang zwischen den Zuständen
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      switchInCurve: Curves.easeInOutCubic,
+      switchOutCurve: Curves.easeInOutCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.8, end: 1.0).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: content
+    );
   }
 
 
- Widget _buildMorphingHomeHeader(double size, int currentPage) {
-
+  Widget _buildMorphingHomeHeader(double size, int currentPage) {
     const pageTitles = {
       0: "SwipeTune",
-
       1: "Your Library",
       2: "Likes Page",
       3: "Settings"
     };
     final title = pageTitles[currentPage];
-
-    // Calculate scroll progress for effects (0.0 = no scroll, 1.0 = fully scrolled)
-    final shrinkOffset = _scrollOffset.clamp(0.0, 40.0); // Smooth transition over 40 pixels
+    final shrinkOffset = _scrollOffset.clamp(0.0, 40.0);
     final progress = (shrinkOffset / 40.0).clamp(0.0, 1.0);
-
-    // Keep the header at full height, but add elegant effects when scrolling
     final currentHeight = size + 8;
 
-    // Stable container with professional scroll effects
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200), // Smoother transition
-      height: currentHeight, // Keep full height for professional look
+      duration: const Duration(milliseconds: 200),
+      height: currentHeight,
       padding: const EdgeInsets.only(bottom: 4),
-      child: ClipRect( // Prevent overflow of blurred elements
+      child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(
-            sigmaX: progress * 15, // Stronger blur for elegance
+            sigmaX: progress * 15,
             sigmaY: progress * 15,
           ),
           child: Container(
@@ -201,7 +303,7 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(progress * 0.7), // Subtle background overlay
+                  Colors.black.withOpacity(progress * 0.7),
                   Colors.transparent,
                 ],
               ),
@@ -214,20 +316,19 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
                         offset: Offset(0, progress * 10),
                       ),
                     ]
-                  : [], // Professional shadow when scrolling
+                  : [],
             ),
             child: Stack(
               children: [
-                // Logo with subtle scale and opacity effect
                 Positioned(
                   left: 24.0,
                   top: 4,
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 150),
-                    opacity: 1.0 - (progress * 0.1), // Subtle fade
+                    opacity: 1.0 - (progress * 0.1),
                     child: AnimatedScale(
                       duration: const Duration(milliseconds: 150),
-                      scale: 1.0 + (progress * 0.05), // Slight upscale for elegance
+                      scale: 1.0 + (progress * 0.05),
                       child: Icon(
                         Icons.waves_rounded,
                         color: Colors.white,
@@ -236,7 +337,6 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
                     ),
                   ),
                 ),
-                // Title with enhanced styling when scrolling
                 Positioned(
                   left: 24.0 + size + 12.0,
                   top: 0,
@@ -277,7 +377,7 @@ class _LogoChoreographerState extends State<LogoChoreographer> {
                                           offset: Offset(0, progress * 3),
                                         ),
                                       ]
-                                    : [], // Text shadow when scrolling
+                                    : [],
                               ),
                             ),
                           )
