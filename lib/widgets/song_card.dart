@@ -2,26 +2,23 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:swipetune/API/SpotifyApiClient.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:swipetune/API/firebase_client.dart';
-import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
-import 'package:swipetune/services/discovery_service.dart';
-import 'package:swipetune/utils/local_preferences_storage.dart';
 import 'player_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/firebasemodels/firebase_track_model.dart';
 
 class GlassSongCard extends StatefulWidget {
   final FirebaseTrack track;
   final bool isPlaying;
   final VoidCallback onPlayPause;
+  final dynamic player;
 
   const GlassSongCard({
     super.key,
     required this.track,
     required this.isPlaying,
     required this.onPlayPause,
+    required this.player,
   });
 
   @override
@@ -40,36 +37,10 @@ class _GlassSongCardState extends State<GlassSongCard>
   late Animation<double> _titleSlideAnim;
   late final Animation<double> _downShiftAnim;
   late final Animation<double> _infoFadeAnim;
-  late final AudioPlayer player;
-  late final DiscoveryService discoveryService;
-  late final SpotifyApiClient apiclient;
-  late final LocalPreferenceStorage localPreferenceStorage;
-  late final FirebaseClient firebaseClient;
 
   @override
   void initState() {
     super.initState();
-    localPreferenceStorage = LocalPreferenceStorage();
-    apiclient = SpotifyApiClient();
-    firebaseClient = FirebaseClient();
-    discoveryService = DiscoveryService(this.firebaseClient, this.localPreferenceStorage, this.apiclient);
-    
-    player = AudioPlayer(
-      audioLoadConfiguration: AudioLoadConfiguration(
-        androidLoadControl: AndroidLoadControl(
-          minBufferDuration: const Duration(seconds: 5),
-          maxBufferDuration: const Duration(seconds: 10),
-          bufferForPlaybackDuration: const Duration(seconds: 2),
-          prioritizeTimeOverSizeThresholds: true,
-        ),
-        darwinLoadControl: DarwinLoadControl(
-          automaticallyWaitsToMinimizeStalling: true,
-          preferredForwardBufferDuration: const Duration(seconds: 5),
-        ),
-      ),
-    );
-    initPlayer();
-
 
     _controller = AnimationController(
       vsync: this,
@@ -112,13 +83,7 @@ class _GlassSongCardState extends State<GlassSongCard>
     });
   }
 
-  void initPlayer() async 
-  {
-    String? previewUrl = await discoveryService.getDeezerPreviewUrl(widget.track); 
-    if(previewUrl != null){
-      player.setUrl(previewUrl);
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +176,7 @@ class _GlassSongCardState extends State<GlassSongCard>
                                 titleOffset: titleSlide,
                                 controlsFade: controlsFade,
                                 textColor: _textColor,
-                                player: player,
+                                player: widget.player,
                                 textShadows: [
                                   Shadow(
                                     offset: const Offset(1.5, 1.5),

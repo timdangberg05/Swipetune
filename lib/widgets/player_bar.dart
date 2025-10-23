@@ -13,6 +13,8 @@ class LiquidMusicPlayer extends StatefulWidget {
   final VoidCallback onPlayPause;
   final double titleOffset; // Offset für Slide-Animation
   final double controlsFade; // Fade für Controls
+  final Color textColor;
+  final List<Shadow> textShadows;
   final AudioPlayer player;
 
   const LiquidMusicPlayer({
@@ -21,11 +23,12 @@ class LiquidMusicPlayer extends StatefulWidget {
     required this.isPlaying,
     required this.onPlayPause,
     this.titleOffset = 0.0,
-    this.controlsFade = 1.0, required Color textColor, required List<Shadow> textShadows,
+    this.controlsFade = 1.0,
+    required this.textColor,
+    required this.textShadows,
     required this.player,
   });
 
-  
 
 
   @override
@@ -34,38 +37,6 @@ class LiquidMusicPlayer extends StatefulWidget {
 }
 
 class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
-
-  late final StreamSubscription<PlayerState> _playerStateSubscription;
-  
-  void onPlayPause(){
-    if(widget.player.playing){
-      widget.player.pause();
-    }else{
-      widget.player.play();
-    }
-  }
-  
-  void listenToPlayerCompletion(){
-    _playerStateSubscription = widget.player.playerStateStream.listen((state){
-        if(state.processingState == ProcessingState.completed){
-          widget.player.seek(Duration.zero);
-          widget.player.pause();
-        }
-      }
-    );
-  }
-
-  @override
-  void initState(){
-    listenToPlayerCompletion();
-    super.initState();
-  }
-
-  @override
-  void dispose(){
-    widget.player.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,11 +137,11 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
                 ),
                 child: IconButton(
                   icon: Icon(
-                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     color: Colors.white,
                     size: 32,
                   ),
-                  onPressed: onPlayPause,
+                  onPressed: widget.onPlayPause,
                 ),
               ),
             ),

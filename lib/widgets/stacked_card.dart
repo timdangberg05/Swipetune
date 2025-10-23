@@ -8,12 +8,14 @@ class GlassStackedCard extends StatelessWidget {
   final FirebaseTrack track;
   final double position;
   final double swipeProgress; // <-- NEU
+  final dynamic player;
 
   const GlassStackedCard({
     super.key,
     required this.track,
     required this.position,
     required this.swipeProgress, // <-- NEU
+    required this.player,
   });
 
   @override
@@ -56,6 +58,7 @@ class GlassStackedCard extends StatelessWidget {
               track: track,
               isPlaying: false,
               onPlayPause: () {}, // Non-interactive in stack
+              player: player,
             ),
           ),
         ),

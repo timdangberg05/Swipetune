@@ -254,9 +254,9 @@ Future<void> loadAllPlaylistTracksInBackground() async
   //   }
   // }
 
-  Future<void> prefetchMoreTracks() async
+  Future<List<FirebaseTrack>> prefetchMoreTracks() async
   {
-    if(_isLoading) return;
+    if(_isLoading) return []; // Return empty list if loading
     _isPrefetching = true;
     notifyListeners();
     try
@@ -266,11 +266,13 @@ Future<void> loadAllPlaylistTracksInBackground() async
       print('✓ Prefetched ${prefetchedTracks.length} tracks');
       _isPrefetching = false;
       notifyListeners();
+      return prefetchedTracks; // Return the new tracks
     }
     catch(e)
     {
       _isPrefetching = false;
       notifyListeners();
+      return []; // Return empty list on error
     }
   }
 
@@ -280,15 +282,11 @@ Future<void> loadAllPlaylistTracksInBackground() async
     if(remaningTracks <= 30 && !_isPrefetching && !_isLoading) prefetchMoreTracks();
   }
 
-  Future<void> likeTrack() async
+  Future<void> likeTrack(FirebaseTrack track) async
   {
-    if(currentTrack == null) return;
-    final track = currentTrack!;
     _likedTracks.add(track);
     _swipeActionNotifier.value =SwipeAction.like;
     await updatePreferencesAfterLike(track);
-    nextTrack();
-    notifyListeners();
     Future.delayed(const Duration(milliseconds: 800), () {
       _swipeActionNotifier.value = null;
     });
@@ -344,15 +342,11 @@ Future<void> loadAllPlaylistTracksInBackground() async
   }
 
 
-  Future<void> dislikeTrack() async
+  Future<void> dislikeTrack(FirebaseTrack track) async
   {
-    if(currentTrack == null) return;
-    final track = currentTrack!;
     _dislikedTracks.add(track);
     _swipeActionNotifier.value = SwipeAction.dislike;
     await updatePreferencesAfterDislike(track);
-    nextTrack();
-    notifyListeners();
     Future.delayed(const Duration(milliseconds: 800), () {
       _swipeActionNotifier.value = null;
     });
@@ -411,7 +405,6 @@ Future<void> loadAllPlaylistTracksInBackground() async
       _currentIndex = 0;
     }
     checkForPrefetching();
-    notifyListeners();
   }
 
   void previousTrack()
