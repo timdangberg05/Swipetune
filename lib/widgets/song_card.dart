@@ -139,6 +139,34 @@ class _GlassSongCardState extends State<GlassSongCard>
                               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                               child: Container(color: Colors.transparent),
                             ),
+
+                            // Gecachtes Albumcover
+                            CachedNetworkImage(
+                              imageUrl: widget.track.albumImageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => _coverFallback(),
+                              errorWidget: (_, __, ___) => _coverFallback(),
+                            ),
+
+                            // 🔥 Gradient Overlay: unten schwarz → oben transparent
+                            Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [
+                                    Colors.black,
+                                    Color.fromARGB(220, 0, 0, 0),
+                                    Color.fromARGB(130, 0, 0, 0),
+                                    Color.fromARGB(60, 0, 0, 0),
+                                    Colors.transparent,
+                                  ],
+                                  stops: [0.0, 0.07, 0.18, 0.3, 1.0],
+                                ),
+                              ),
+                            ),
+
+                            // Rahmen
                             Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(32),
@@ -148,23 +176,8 @@ class _GlassSongCardState extends State<GlassSongCard>
                                 ),
                               ),
                             ),
-                            // Gecachtes Albumcover
-                            CachedNetworkImage(
-                              imageUrl: widget.track.albumImageUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => _coverFallback(),
-                              errorWidget: (_, __, ___) => _coverFallback(),
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(32),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.4),
-                                  width: 3,
-                                ),
-                              ),
-                            ),
-                            // Player Bar
+
+                            // Player Bar unten
                             Positioned(
                               bottom: 20,
                               left: 20,
@@ -177,16 +190,17 @@ class _GlassSongCardState extends State<GlassSongCard>
                                 controlsFade: controlsFade,
                                 textColor: _textColor,
                                 player: widget.player,
-                                textShadows: [
+                                textShadows: const [
                                   Shadow(
-                                    offset: const Offset(1.5, 1.5),
+                                    offset: Offset(1.5, 1.5),
                                     blurRadius: 2,
                                     color: Colors.black87,
                                   ),
                                 ],
                               ),
                             ),
-                            // Track Details
+
+                            // Track Details etc.
                             Positioned(
                               bottom: 50,
                               left: 25,
@@ -201,6 +215,8 @@ class _GlassSongCardState extends State<GlassSongCard>
                                       _buildSpotifyButton("https://open.spotify.com/track/${widget.track.id}"),
                                       const SizedBox(height: 10),
                                       _buildInfoRow(Icons.album, "Album", widget.track.albumName),
+                                      const SizedBox(height: 10),
+                                      _buildInfoRow(FontAwesomeIcons.music, "Genre", widget.track.collectedGenres.join(", ")),
                                       const SizedBox(height: 10),
                                       _buildInfoRow(Icons.calendar_today, "Release", widget.track.releaseDate),
                                       const SizedBox(height: 10),

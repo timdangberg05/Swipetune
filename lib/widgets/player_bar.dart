@@ -68,7 +68,7 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
                     color: Colors.white,
                     shadows: [textShadow],
                   ),
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
@@ -174,7 +174,7 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
         }
         
         return Container(
-          height: 30,
+          height: 5,
           //padding: const EdgeInsets.symmetric(horizontal: 6),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.7),
@@ -186,19 +186,19 @@ class _LiquidMusicPlayerState extends State<LiquidMusicPlayer>{
               return Stack(
                 alignment: Alignment.centerLeft,
                 children: [
-                  // Der Hintergrund des Balkens
+                  //Der Hintergrund des Balkens
                   Container(
-                    height: 30,
+                    height: 5,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  // Der animierte Vordergrund, der den Fortschritt anzeigt
+                  //Der animierte Vordergrund, der den Fortschritt anzeigt
                   Container(
 
                     width: constraints.maxWidth * progress, // 3. Breite dynamisch berechnen
-                    height: 30,
+                    height: 5,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
                       gradient: LinearGradient(
