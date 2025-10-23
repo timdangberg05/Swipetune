@@ -44,6 +44,14 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
   
   late AnimationController _swipeFeedbackController;
   SwipeAction? _lastProcessedAction;
+  double _lastGlowValue = 0.0; // Neue Variable für nahtlose Glow-Animation
+
+  // --- NEU: Status-Variablen für Farb-Latching ---
+  // Definiere die Farben hier, damit wir sie speichern können
+  final Color _likeColor = const Color(0xFF1DB954);
+  final Color _dislikeColor = const Color(0xFFC73666);
+  // Diese Variable "merkt" sich die Farbe für die Dauer der Animation
+  Color _activeFeedbackColor = Colors.transparent;
 
   @override
   void initState() {
@@ -84,7 +92,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
       if (widget.backgroundMorphController != null) widget.backgroundMorphController,
       if (widget.homeTransitionController != null) widget.homeTransitionController,
       if (widget.swipeActionNotifier != null) widget.swipeActionNotifier,
-      provider.dragOffsetNotifier,
+      provider.swipeProgressNotifier,
     ].where((l) => l != null).cast<Listenable>().toList();
 
     return AnimatedBuilder(
@@ -96,48 +104,67 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
         final morphValue = widget.backgroundMorphController?.value ?? 0.0;
         final homeTransition = widget.homeTransitionController?.value ?? 0.0;
         
-        // --- SWIPE ACTION TRIGGER ---
+        final dragInfluence = provider.swipeProgressNotifier.value;
+        final double likeGlow = (dragInfluence).clamp(0.0, 1.0);
+        final double dislikeGlow = (-dragInfluence).clamp(0.0, 1.0);
+        final double currentGlow = math.max(likeGlow, dislikeGlow);
+
+
+        // --- NEUE, VEREINHEITLICHTE GLOW/FLASH LOGIK (Version 3) ---
         final currentAction = widget.swipeActionNotifier?.value;
+
+        // 1. Ein neuer Swipe wurde *bestätigt* (losgelassen)
         if (currentAction != null && currentAction != _lastProcessedAction) {
           _lastProcessedAction = currentAction;
 
-          for (final blob in _blobs) {
-            if (currentAction == SwipeAction.like && blob.position.dx > 0.5) {
-              blob.velocity += Offset(0.25, 0.12);
-              blob.radius += 0.08;
-            } else if (currentAction == SwipeAction.dislike && blob.position.dx <= 0.5) {
-              blob.velocity -= Offset(0.25, -0.12);
-              blob.radius += 0.08;
-            }
-          }
+          // SETZE DIE "LATCHED" FARBE
+          _activeFeedbackColor = (currentAction == SwipeAction.like) ? _likeColor : _dislikeColor;
 
-          void listener(status) {
+          _swipeFeedbackController.forward(from: _lastGlowValue);
+
+          void listener(status) { // 'listener' muss hier definiert werden, um entfernt zu werden
             if (status == AnimationStatus.completed) {
               _swipeFeedbackController.removeStatusListener(listener);
-              _swipeFeedbackController.reverse();
             }
           }
           _swipeFeedbackController.addStatusListener(listener);
-          _swipeFeedbackController.forward(from: 0.0);
+
+        // 2. Der Swipe-Status wurde vom Provider zurückgesetzt (Flash-Animation soll abklingen)
         } else if (currentAction == null && _lastProcessedAction != null) {
           _lastProcessedAction = null;
+          _swipeFeedbackController.reverse(); // Fade den Flash/Glow aus
+          // _activeFeedbackColor bleibt auf der letzten Farbe, während es ausfadet!
+
+        // 3. Wir *ziehen* gerade (kein bestätigter Swipe)
+        } else if (_lastProcessedAction == null) {
+          _swipeFeedbackController.value = currentGlow;
+
+          // SETZE DIE "LATCHED" FARBE AUCH WÄHREND DES ZIEHENS
+          if (likeGlow > 0) {
+            _activeFeedbackColor = _likeColor;
+          } else if (dislikeGlow > 0) {
+            _activeFeedbackColor = _dislikeColor;
+          }
         }
+
+        if (currentGlow > 0) {
+          _lastGlowValue = currentGlow;
+        }
+        // --- ENDE NEUE LOGIK ---
 
         final List<Color> _spotifyColors = [
           const Color(0xFF1DB954).withOpacity(0.6), const Color(0xFF1ED760).withOpacity(0.5),
           const Color(0xFF4AE280).withOpacity(0.5), const Color(0xFF2DEB70).withOpacity(0.4),
         ];
 
-        final dragOffset = provider.dragOffsetNotifier.value;
-        final dragInfluence = (dragOffset.dx / size.width).clamp(-1.0, 1.0);
+        // Definiere die Zielfarben.
+        final likeColor = const Color(0xFF1DB954); // Spotify-Grün
+        final dislikeColor = const Color(0xFFC73666); // Ein Rotton
 
-        final targetColor = _lastProcessedAction == SwipeAction.like
-            ? const Color(0xFF00B48A)
-            : const Color(0xFFC73666);
-
+        // Der feedbackColor wird jetzt vom Controller UND der gelatchten Farbe gesteuert
         final feedbackColor = ColorTween(
-          begin: Colors.transparent,
-          end: targetColor,
+          begin: Colors.transparent, // Immer von transparent...
+          end: _activeFeedbackColor,   // ...zur aktiven Farbe
         ).transform(_swipeFeedbackController.value);
 
         for (int i = 0; i < _blobs.length; i++) {
@@ -161,14 +188,17 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
 
             // 3. HORIZONTAL DRAG FOLLOW (Reagiert auf Karten-Swipe)
             if (dragInfluence.abs() > 0.01) {
-                final horizontalPull = dragInfluence * 0.5;
+                // HIER: Multiplikator von 0.5 auf 0.25 reduziert
+                final horizontalPull = dragInfluence * 0.25;
                 newVelocity += Offset(horizontalPull, 0);
-                newVelocity += Offset(horizontalPull * (blob.position.dx - 0.5).abs() * 0.8, 0);
+                // HIER: Diese Zeile hat den Effekt übertrieben und wird entfernt/auskommentiert
+                // newVelocity += Offset(horizontalPull * (blob.position.dx - 0.5).abs() * 0.8, 0);
+                
                 newVelocity += Offset(0, math.sin(blob.position.dx * math.pi * 2) * horizontalPull * 0.2);
                 blob.radius += dragInfluence.abs() * 0.003; 
             }
 
-            // 4. NEUE POSITION BERECHNEN (Kombiniert "Fallen" und "Swipe")
+            // 4. NEUE POSITION BERECHNEN (Kombiniert "Falen" und "Swipe")
             // Wir nehmen die "gefallene" Position und addieren die (gedämpfte) Swipe-Geschwindigkeit
             var newPosition = Offset(lerpedPosition.dx / size.width, lerpedPosition.dy / size.height) + newVelocity * 0.02;
 
@@ -183,7 +213,8 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
             // Vertikales Wrap-Around ist hier nicht nötig, da sie am Boden "kleben"
 
             blob.position = newPosition;
-            blob.velocity = newVelocity;
+            // HIER: Neue Dämpfungszeile für sanftere Bewegung
+            blob.velocity = newVelocity * 0.95; // Dämpft die Geschwindigkeit leicht ab
           
           // ### LOGIK FÜR LOGIN-SCREEN (RANDOM BEWEGUNG) ###
           } else {
@@ -208,25 +239,29 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground> with Tick
             if (blob.position.dy < -0.2) blob.position = Offset(blob.position.dx, 1.2);
           }
 
-          // --- COLOR BLENDING (Für beide Zustände gleich) ---
+          // --- VEREINFACHTE FARB-LOGIK in der for-Schleife (Version 3) ---
           final spotifyBlendedColor = Color.lerp(_originalColors[i], _spotifyColors[i % _spotifyColors.length], widget.colorTransitionValue.value)!;
-          
           Color finalColor = spotifyBlendedColor;
-          double blendFactor = 0.0;
 
-          if (_lastProcessedAction == SwipeAction.like && blob.position.dx > 0.5) {
-            blendFactor = _swipeFeedbackController.value;
-          } else if (_lastProcessedAction == SwipeAction.dislike && blob.position.dx <= 0.5) {
-            blendFactor = _swipeFeedbackController.value;
-          }
+          if (feedbackColor != null && _swipeFeedbackController.value > 0) {
 
-          final easedBlendFactor = Curves.easeOutCubic.transform(blendFactor);
-          final waveBlend = (easedBlendFactor * (2.5 - blob.position.dy)).clamp(0.0, 1.0);
+              // Bestimmen, ob wir links oder rechts sind, um die Welle zu steuern
+              bool isLikeSide = (_lastProcessedAction == SwipeAction.like) || (_lastProcessedAction == null && likeGlow > 0);
 
-          if (feedbackColor != null && waveBlend > 0) {
-            finalColor = Color.lerp(spotifyBlendedColor, feedbackColor, waveBlend)!;
+              double blendFactor = 0.0;
+              if (isLikeSide) {
+                  // Bei Like-Glow/Flash, rechte Bubbles stärker einfärben
+                  blendFactor = (_swipeFeedbackController.value * (blob.position.dx + 0.5)).clamp(0.0, 1.0);
+              } else {
+                  // Bei Dislike-Glow/Flash, linke Bubbles stärker einfärben
+                  blendFactor = (_swipeFeedbackController.value * (1.5 - blob.position.dx)).clamp(0.0, 1.0);
+              }
+
+              final easedBlendFactor = Curves.easeOutCubic.transform(blendFactor);
+              finalColor = Color.lerp(spotifyBlendedColor, feedbackColor, easedBlendFactor)!;
           }
           blob.color = finalColor;
+          // --- ENDE ---
         }
         
         final auroraOpacity = morphValue * (1 - homeTransition);

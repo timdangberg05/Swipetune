@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'dart:ui'; // Für lerpDouble
 import 'package:provider/provider.dart';
 import 'package:swipetune/screens/songdetails.dart';
 import '../providers/spotify_data_provider.dart';
@@ -14,43 +15,76 @@ class SwipeHomePage extends StatefulWidget {
 }
 
 class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateMixin {
-  
-  bool _isPlaying = false;
-  Offset _dragOffset = Offset.zero;
 
-  late AnimationController _snapAnimationController;
-  late Animation<Offset> _snapAnimation;
+  bool _isPlaying = false;
+  late AnimationController _cardAnimationController;
+  double _screenWidth = 0;
 
   @override
   void initState() {
     super.initState();
-    _snapAnimationController = AnimationController(
+
+    // Der NEUE zentrale Controller für die Swipe-Physik
+    _cardAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      lowerBound: -1.0, // -1.0 = Dislike
+      upperBound: 1.0,  // 1.0 = Like
+      value: 0.0,      // 0.0 = Center
+      duration: const Duration(milliseconds: 300), // Dauer für Snap/Completion
     );
-    _snapAnimation = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(_snapAnimationController);
-    _snapAnimationController.addListener(() => setState(() => _dragOffset = _snapAnimation.value));
+
+    _cardAnimationController.addListener(_onAnimationUpdate);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _screenWidth = MediaQuery.of(context).size.width;
       final provider = context.read<SpotifyDataProvider>();
-      if(provider.tracks.isEmpty)
-      {
+      if(provider.tracks.isEmpty) {
         provider.loadDiscoveryTracks();
       }
-    });;
+    });
   }
 
   @override
   void dispose() {
-    _snapAnimationController.dispose();
+    _cardAnimationController.removeListener(_onAnimationUpdate);
+    _cardAnimationController.dispose();
     super.dispose();
+  }
+
+  // Diese Methode wird JEDEN Frame aufgerufen, während die Karte animiert wird
+  void _onAnimationUpdate() {
+    // Aktualisiere den Provider-Notifier für das Hintergrund-Feedback
+    final provider = context.read<SpotifyDataProvider>();
+    provider.swipeProgressNotifier.value = _cardAnimationController.value;
+
+    // setState() ist hier nicht nötig, da wir einen AnimatedBuilder verwenden
+  }
+
+  /// Wird aufgerufen, NACHDEM die Fling/Animate-Animation beendet ist
+  void _handleSwipeComplete(SwipeAction action) {
+    final provider = context.read<SpotifyDataProvider>();
+
+    if (action == SwipeAction.like) {
+      provider.likeTrack();
+    } else {
+      provider.dislikeTrack();
+    }
+
+    // WICHTIG: Setze den Controller sofort für die nächste Karte zurück.
+    // Da der provider.likeTrack() den currentIndex ändert, sieht der User
+    // die neue Karte direkt in der Mittelposition.
+    _cardAnimationController.value = 0.0;
+
+    setState(() {
+      _isPlaying = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<SpotifyDataProvider>(
       builder: (context, provider, child) {
-        final track = provider.currentTrack;      
+        final track = provider.currentTrack;
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: SafeArea(
@@ -62,82 +96,90 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
                   ),
 
                 if (!provider.isLoading && track != null)
-                  Center(
-                    child: Stack(
-                      key: ValueKey(provider.currentIndex),
-                      alignment: Alignment.center,
-                      children: [
-                        for (int i = 1; i <= 5; i++)
-                          if (provider.currentIndex + i < provider.tracks.length)
-                            GlassStackedCard(
-                              track: provider.tracks[provider.currentIndex + i],
-                              position: i.toDouble(),
-                            ),
-                        // Nächste Karte im Stapel
-                        if (provider.currentIndex + 1 < provider.tracks.length)
-                          GlassStackedCard(
-                            track: provider.tracks[provider.currentIndex + 1],
-                            position: 1,
-                          ),
+                  // AnimatedBuilder ist effizienter als setState() im Listener
+                  AnimatedBuilder(
+                    animation: _cardAnimationController,
+                    builder: (context, _) {
+                      final progress = _cardAnimationController.value;
+                      final cardOffset = Offset(progress * _screenWidth * 1.1, 0);
+                      final cardRotation = progress * (math.pi / 20);
 
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SongDetailPage(track: track),
-                              ),
-                            );
-                          },
-                          onHorizontalDragUpdate: (details) {
-                            setState(() => _dragOffset += details.delta);
-                            provider.dragOffsetNotifier.value = _dragOffset;
-                          },
-                          onHorizontalDragEnd: (details) {
-                            final width = MediaQuery.of(context).size.width;
-                            final halfScreen = width * 0.5;
-                            if (_dragOffset.dx.abs() > MediaQuery.of(context).size.width * 0.4) {
-                              if (_dragOffset.dx > 0) {
-                                provider.likeTrack();
-                              } else {
-                                provider.dislikeTrack();
-                              }
-
-                              setState(() {
-                                _dragOffset = Offset.zero;
-                                _isPlaying = false;
-                              });
-                              provider.dragOffsetNotifier.value = Offset.zero;
-                            } else {
-                              // Animate back to center
-                              _snapAnimation = Tween<Offset>(
-                                begin: _dragOffset,
-                                end: Offset.zero,
-                              ).animate(
-                                CurvedAnimation(
-                                  parent: _snapAnimationController,
-                                  curve: Curves.elasticOut,
+                      return Center(
+                        child: Stack(
+                          key: ValueKey(provider.currentIndex),
+                          alignment: Alignment.center,
+                          children: [
+                            // --- Der KARTEN-STAPEL (Hintergrund) ---
+                            // Zeigt die nächsten 3 Karten
+                            for (int i = 3; i >= 1; i--)
+                              if (provider.currentIndex + i < provider.tracks.length)
+                                GlassStackedCard(
+                                  track: provider.tracks[provider.currentIndex + i],
+                                  position: i.toDouble(),
+                                  swipeProgress: progress, // <-- Live-Fortschritt!
                                 ),
-                              )..addListener(() {
-                                provider.dragOffsetNotifier.value = _snapAnimation.value;
-                              });
-                              _snapAnimationController.forward(from: 0.0);
-                            }
-                          },
-                          child: Transform.translate(
-                            offset: _dragOffset,
-                            child: Transform.rotate(
-                              angle: (_dragOffset.dx / MediaQuery.of(context).size.width) * (math.pi / 20),
-                              child: GlassSongCard(
-                                track: track,
-                                isPlaying: _isPlaying,
-                                onPlayPause: () => setState(() => _isPlaying = !_isPlaying),
+
+                            // --- Die OBERSTE KARTE ---
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SongDetailPage(track: track),
+                                  ),
+                                );
+                              },
+                              onHorizontalDragStart: (details) {
+                                // Stoppe jede laufende Snap-Animation
+                                _cardAnimationController.stop();
+                              },
+                              onHorizontalDragUpdate: (details) {
+                                // Der Finger "schiebt" den Controller-Wert
+                                // Die 'Reibung' (screenWidth * 0.8) sorgt für ein gutes Gefühl
+                                double friction = (_screenWidth == 0) ? 300.0 : _screenWidth * 0.8;
+                                _cardAnimationController.value += details.delta.dx / friction;
+                              },
+                              onHorizontalDragEnd: (details) {
+                                final velocity = details.velocity.pixelsPerSecond.dx;
+                                final progress = _cardAnimationController.value;
+
+                                // 1. "Fling"-Check (schneller Wisch)
+                                if (velocity.abs() > 800.0) {
+                                  final target = velocity > 0 ? 1.0 : -1.0;
+                                  // Fling-Animation zur Seite
+                                  _cardAnimationController.fling(velocity: velocity / _screenWidth).then((_) {
+                                    _handleSwipeComplete(target > 0 ? SwipeAction.like : SwipeAction.dislike);
+                                  });
+                                }
+                                // 2. "Position"-Check (langsamer Drag)
+                                else if (progress.abs() > 0.4) {
+                                  final target = progress > 0 ? 1.0 : -1.0;
+                                  // Animation zur Seite
+                                  _cardAnimationController.animateTo(target, curve: Curves.easeOut).then((_) {
+                                    _handleSwipeComplete(target > 0 ? SwipeAction.like : SwipeAction.dislike);
+                                  });
+                                }
+                                // 3. "Snap-Back"-Check (zurück zur Mitte)
+                                else {
+                                  _cardAnimationController.animateTo(0.0, curve: Curves.elasticOut);
+                                }
+                              },
+                              child: Transform.translate(
+                                offset: cardOffset,
+                                child: Transform.rotate(
+                                  angle: cardRotation,
+                                  child: GlassSongCard(
+                                    track: track,
+                                    isPlaying: _isPlaying,
+                                    onPlayPause: () => setState(() => _isPlaying = !_isPlaying),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    }
                   )
               ],
             ),

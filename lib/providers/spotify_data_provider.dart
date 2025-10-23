@@ -48,7 +48,7 @@ class SpotifyDataProvider extends ChangeNotifier {
   bool get isLoadingPlaylistTracks => _isLoadingPlaylistTracks;
 
   late final ValueNotifier<SwipeAction?> _swipeActionNotifier;
-  final ValueNotifier<Offset> dragOffsetNotifier = ValueNotifier(Offset.zero);
+  final ValueNotifier<double> swipeProgressNotifier = ValueNotifier(0.0);
   ValueNotifier<SwipeAction?> get swipeActionNotifier => _swipeActionNotifier;
 
   SpotifyDataProvider(this._songService, this._playlistSerivce,this._discoveryService, this._localPreferenceStorage)
