@@ -53,6 +53,21 @@ class _GlassSongCardState extends State<GlassSongCard>
     apiclient = SpotifyApiClient();
     firebaseClient = FirebaseClient();
     discoveryService = DiscoveryService(this.firebaseClient, this.localPreferenceStorage, this.apiclient);
+    
+    player = AudioPlayer(
+      audioLoadConfiguration: AudioLoadConfiguration(
+        androidLoadControl: AndroidLoadControl(
+          minBufferDuration: const Duration(seconds: 5),
+          maxBufferDuration: const Duration(seconds: 10),
+          bufferForPlaybackDuration: const Duration(seconds: 2),
+          prioritizeTimeOverSizeThresholds: true,
+        ),
+        darwinLoadControl: DarwinLoadControl(
+          automaticallyWaitsToMinimizeStalling: true,
+          preferredForwardBufferDuration: const Duration(seconds: 5),
+        ),
+      ),
+    );
     initPlayer();
 
 
@@ -99,7 +114,6 @@ class _GlassSongCardState extends State<GlassSongCard>
 
   void initPlayer() async 
   {
-    player = AudioPlayer();
     String? previewUrl = await discoveryService.getDeezerPreviewUrl(widget.track); 
     if(previewUrl != null){
       player.setUrl(previewUrl);
