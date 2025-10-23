@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:swipetune/API/SpotifyApiClient.dart';
@@ -9,6 +10,7 @@ import 'package:swipetune/models/firebasemodels/firebase_track_model.dart';
 import 'package:swipetune/services/discovery_service.dart';
 import 'package:swipetune/utils/local_preferences_storage.dart';
 import 'player_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GlassSongCard extends StatefulWidget {
   final FirebaseTrack track;
@@ -29,7 +31,7 @@ class GlassSongCard extends StatefulWidget {
 class _GlassSongCardState extends State<GlassSongCard>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
-  final Color _textColor = Colors.white;
+  final Color _textColor = const Color.fromARGB(255, 255, 255, 255);
 
   late final AnimationController _controller;
   late final Animation<double> _liftAnim;
@@ -119,7 +121,6 @@ class _GlassSongCardState extends State<GlassSongCard>
       builder: (context, constraints) {
         final dynamicSlide = -constraints.maxHeight * 0.46;
 
-        // Animation des Songtitels synchron zur Card
         _titleSlideAnim = Tween<double>(begin: 0, end: dynamicSlide).animate(
           CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
         );
@@ -154,7 +155,7 @@ class _GlassSongCardState extends State<GlassSongCard>
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Hintergrund Blur (leicht reduziert)
+                            // Hintergrund Blur
                             BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                               child: Container(color: Colors.transparent),
@@ -216,18 +217,15 @@ class _GlassSongCardState extends State<GlassSongCard>
                                 child: Opacity(
                                   opacity: _infoFadeAnim.value,
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _buildInfoRow(Icons.album, "Album",
-                                          widget.track.albumName),
-                                      const SizedBox(height: 8),
-                                      _buildInfoRow(Icons.calendar_today,
-                                          "Release", widget.track.releaseDate),
-                                      const SizedBox(height: 8),
-                                      _buildInfoRow(Icons.trending_up,
-                                          "Popularity",
-                                          "${widget.track.popularity}%"),
+                                      _buildSpotifyButton("https://open.spotify.com/track/${widget.track.id}"),
+                                      const SizedBox(height: 10),
+                                      _buildInfoRow(Icons.album, "Album", widget.track.albumName),
+                                      const SizedBox(height: 10),
+                                      _buildInfoRow(Icons.calendar_today, "Release", widget.track.releaseDate),
+                                      const SizedBox(height: 10),
+                                      _buildInfoRow(Icons.trending_up, "Popularity", "${widget.track.popularity}%"),
                                     ],
                                   ),
                                 ),
@@ -250,8 +248,7 @@ class _GlassSongCardState extends State<GlassSongCard>
   Widget _coverFallback() => Container(
         color: Colors.grey.shade900.withOpacity(0.5),
         child: const Center(
-          child: Icon(Icons.music_note_rounded,
-              size: 60, color: Colors.white38),
+          child: Icon(Icons.music_note_rounded, size: 60, color: Colors.white38),
         ),
       );
 
@@ -267,7 +264,7 @@ class _GlassSongCardState extends State<GlassSongCard>
             Positioned(
               left: shadowOffset.dx,
               top: shadowOffset.dy,
-              child: Icon(icon, color: shadowColor, size: 18),
+              child: Icon(icon, color: const Color.fromARGB(221, 0, 0, 0), size: 18),
             ),
             Icon(icon, color: _textColor, size: 18),
           ],
@@ -310,4 +307,61 @@ class _GlassSongCardState extends State<GlassSongCard>
       ],
     );
   }
+
+  Widget _buildSpotifyButton(String? spotifyUrl) {
+  if (spotifyUrl == null || spotifyUrl.isEmpty) return const SizedBox.shrink();
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20),
+      splashColor: const Color.fromARGB(60, 95, 221, 11),
+      highlightColor: Colors.white10,
+      onTap: () async {
+        try {
+          final uri = Uri.parse(spotifyUrl);
+          final launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (!launched) {
+            debugPrint("Could not launch Spotify URL in browser");
+          }
+        } catch (e) {
+          debugPrint("Error launching Spotify URL: $e");
+        }
+      },
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal:  3, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 4,
+              offset: const Offset(2, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const FaIcon(FontAwesomeIcons.spotify, color: Color.fromARGB(255, 50, 221, 7), size: 16),
+            const SizedBox(width: 8),
+            Text(
+              "Listen on Spotify",
+              style: GoogleFonts.manrope(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 }
