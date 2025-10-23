@@ -252,8 +252,10 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
       _trackQueue.removeAt(0);
       _currentPlayerIsPlaying = false;
       nextTrack = _trackQueue.firstOrNull;
-      // --- Prefetching Check ---
-      if (_trackQueue.length <= 10 && !provider.isPrefetching && !provider.isLoading) {
+      // --- Prefetching Check (FRÜHER AUSLÖSEN) ---
+      // Lade nach, wenn z.B. nur noch 15 Karten übrig sind
+      const prefetchThreshold = 15; // Du kannst diesen Wert anpassen (z.B. 15 oder 20)
+      if (_trackQueue.length <= prefetchThreshold && !provider.isPrefetching && !provider.isLoading) {
          needsPrefetch = true;
       }
       // --- Ende Prefetching Check ---
@@ -285,41 +287,51 @@ class _SwipeHomePageState extends State<SwipeHomePage> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    // Nur noch 'select' verwenden, um gezielt auf isLoading zu hören,
-    // *bevor* die Queue initialisiert ist.
-    final isLoadingBeforeInit = context.select((SpotifyDataProvider p) => p.isLoading && !_isQueueInitialized);
+    // Höre auf isLoading UND isPrefetching vom Provider
+    final providerIsLoadingOrPrefetching = context.select((SpotifyDataProvider p) => p.isLoading || p.isPrefetching);
+    // Höre separat darauf, ob die Queue initialisiert wurde
+    final isUiInitialized = _isQueueInitialized; // Verwende die lokale Variable
 
-    // --- VEREINFACHTE BUILD-LOGIK ---
+    // --- ANGEPASSTE BUILD-LOGIK ---
 
-    // 1. Zeige Ladeindikator NUR, wenn wir noch nicht initialisiert sind UND der Provider lädt.
-    if (isLoadingBeforeInit) {
-       print("⏳ Showing Loading Indicator (Provider loading, UI not initialized yet)"); // Debug Print
+    // 1. Zeige Ladeindikator, wenn die UI noch nicht initialisiert ist UND der Provider lädt.
+    if (!isUiInitialized && providerIsLoadingOrPrefetching) {
+       print("⏳ Showing Loading Indicator (UI not initialized and Provider is loading initial tracks)"); // Debug Print
        return const Scaffold(
          backgroundColor: Colors.transparent,
          body: Center(child: CircularProgressIndicator(color: Colors.white)),
        );
     }
-    // 2. Sobald _isQueueInitialized true ist (egal ob Tracks da sind oder nicht),
-    //    bauen wir die Haupt-UI.
-    else if (_isQueueInitialized) {
-       // Prüfe hier, ob die _trackQueue leer ist.
+    // 2. Sobald die UI initialisiert ist (_isQueueInitialized == true)
+    else if (isUiInitialized) {
+       // Prüfe, ob die lokale Queue leer ist.
        if (_trackQueue.isEmpty) {
-          print("🤷 UI Initialized, but Track Queue is empty. Showing Empty State."); // Debug Print
-          // Lese den Provider, um reload auszulösen
-          final provider = context.read<SpotifyDataProvider>();
-          return Scaffold(
-             backgroundColor: Colors.transparent,
-             // Verwende dein EmptyState Widget
-             body: Center(child: EmptyState(onReload: () async {
-                 print("🔄 Reload triggered from EmptyState.");
-                 // Setze UI zurück in Ladezustand und lade neu
-                 setState(() {
-                   _isQueueInitialized = false;
-                 });
-                 await provider.reload(); // reload sollte isLoading wieder auf true setzen
-                 // didChangeDependencies wird dann die Initialisierung erneut versuchen
-             })),
-          );
+          // --- HIER DIE NEUE LOGIK ---
+          // Wenn die Queue leer ist, ABER der Provider gerade nachlädt -> Ladeindikator
+          if (providerIsLoadingOrPrefetching) {
+             print("⏳ Showing Loading Indicator (Queue empty, but prefetching in progress)"); // Debug Print
+             return const Scaffold(
+               backgroundColor: Colors.transparent,
+               body: Center(child: CircularProgressIndicator(color: Colors.white70)), // Leicht anderer Indikator?
+             );
+          }
+          // Wenn Queue leer UND Provider lädt NICHT -> Zeige EmptyState
+          else {
+             print("🤷 UI Initialized, Track Queue empty, NOT prefetching. Showing Empty State."); // Debug Print
+             final provider = context.read<SpotifyDataProvider>();
+             return Scaffold(
+                backgroundColor: Colors.transparent,
+                body: Center(child: EmptyState(onReload: () async {
+                    print("🔄 Reload triggered from EmptyState (should ideally not happen with prefetch).");
+                    // Setze UI zurück in Ladezustand und lade neu
+                    setState(() {
+                      _isQueueInitialized = false; // Erzwingt Neuladen der UI-Logik
+                    });
+                    await provider.reload(); // Startet den Ladevorgang im Provider
+                })),
+             );
+          }
+          // --- ENDE NEUE LOGIK ---
        }
        // Wenn die Queue initialisiert UND NICHT leer ist -> Baue die Karten.
        else {
