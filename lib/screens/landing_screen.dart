@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:swipetune/screens/auth_page.dart';
 import 'package:swipetune/screens/main_screen.dart';
@@ -179,6 +180,51 @@ class _LandingScreenState extends State<LandingScreen> with TickerProviderStateM
             backgroundMorphController: _backgroundMorphController,
             homeTransitionController: _homeController.view,
           ),
+
+          // --- Shader Warm-up Widget ---
+          // Dieses Widget rendert 1 Frame lang die teuersten
+          // Effekte in einem 1x1 Pixel-Container, um die Shader zu kompilieren.
+          // Es wird nur einmal beim App-Start ausgeführt.
+          FutureBuilder(
+            future: Future.delayed(const Duration(milliseconds: 200)), // Warte 200ms
+            builder: (context, snapshot) {
+              // Rendert nur, bevor die Verzögerung vorbei ist
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.0, // Absolut unsichtbar
+                    child: IgnorePointer(
+                      ignoring: true, // Nimmt keine Taps
+                      child: Container(
+                        width: 1, // Minimalgröße
+                        height: 1,
+                        child: Stack(
+                          children: [
+                            // 1. Wärmt den CustomPaint-Blur auf
+                            CustomPaint(
+                              painter: LiquidBlobPainter(
+                                blobs: [],
+                                morphValue: 0,
+                                homeTransition: 0,
+                              ),
+                            ),
+                            // 2. Wärmt den BackdropFilter (Glas-Effekt) auf
+                            BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 1, sigmaY: 1),
+                              child: Container(width: 1, height: 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+              // Verschwindet nach 200ms
+              return const SizedBox.shrink();
+            },
+          ),
+          // --- ENDE Shader Warm-up ---
 
           LogoChoreographer(
             introController: _transitionController,

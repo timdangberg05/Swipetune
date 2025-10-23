@@ -45,16 +45,18 @@ class GlassStackedCard extends StatelessWidget {
     final double liveOpacity = lerpDouble(opacityFactor, nextOpacity, progress)!;
     // --- ENDE NEU ---
 
-    return Transform.translate(
-      offset: Offset(0, liveVerticalOffset),
-      child: Transform.scale(
-        scale: liveScale,
-        child: Opacity(
-          opacity: liveOpacity.clamp(0.0, 1.0), // Clamp für Sicherheit
-          child: GlassSongCard(
-            track: track,
-            isPlaying: false,
-            onPlayPause: () {}, // Non-interactive in stack
+    return RepaintBoundary(
+      child: Transform.translate(
+        offset: Offset(0, liveVerticalOffset),
+        child: Transform.scale(
+          scale: liveScale,
+          child: Opacity(
+            opacity: liveOpacity.clamp(0.0, 1.0), // Clamp für Sicherheit
+            child: GlassSongCard(
+              track: track,
+              isPlaying: false,
+              onPlayPause: () {}, // Non-interactive in stack
+            ),
           ),
         ),
       ),
