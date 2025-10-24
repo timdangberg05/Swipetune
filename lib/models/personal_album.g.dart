@@ -1,4 +1,4 @@
-// GENERATED CLAUDE CODE - DO NOT MODIFY BY HAND
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'personal_album.dart';
 
@@ -20,19 +20,31 @@ class PersonalAlbumAdapter extends TypeAdapter<PersonalAlbum> {
       name: fields[0] as String,
       trackIds: (fields[1] as List).cast<String>(),
       coverImageUrl: fields[2] as String?,
+      spotifyPlaylistId: fields[3] as String?,
+      lastSyncDate: fields[4] as DateTime?,
+      syncEnabled: fields[5] as bool,
+      needsSync: fields[6] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, PersonalAlbum obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
       ..write(obj.trackIds)
       ..writeByte(2)
-      ..write(obj.coverImageUrl);
+      ..write(obj.coverImageUrl)
+      ..writeByte(3)
+      ..write(obj.spotifyPlaylistId)
+      ..writeByte(4)
+      ..write(obj.lastSyncDate)
+      ..writeByte(5)
+      ..write(obj.syncEnabled)
+      ..writeByte(6)
+      ..write(obj.needsSync);
   }
 
   @override

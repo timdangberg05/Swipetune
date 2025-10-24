@@ -12,5 +12,25 @@ class PersonalAlbum extends HiveObject {
   @HiveField(2)
   String? coverImageUrl;
 
-  PersonalAlbum({required this.name, this.trackIds = const [], this.coverImageUrl});
+  @HiveField(3)
+  String? spotifyPlaylistId;
+
+  @HiveField(4)
+  DateTime? lastSyncDate;
+
+  @HiveField(5)
+  bool syncEnabled;
+
+  @HiveField(6)
+  bool needsSync;
+
+  PersonalAlbum({
+    required this.name,
+    this.trackIds = const [],
+    this.coverImageUrl,
+    this.spotifyPlaylistId,
+    this.lastSyncDate,
+    this.syncEnabled = false,
+    this.needsSync = false,
+  });
 }

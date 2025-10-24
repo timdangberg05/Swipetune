@@ -96,6 +96,28 @@ class SpotifyDataProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> refreshUserPlaylists() async {
+    _isLoadingPlaylist = true;
+    _playlistErrorMessage = null;
+    notifyListeners();
+
+    try {
+      // Always reload from Spotify, ignoring cached playlists
+      print('🔄 Refreshing Spotify playlists from server...');
+      _userPlaylists = await _playlistSerivce.getUserPlaylists();
+      print('✅ Refreshed ${userPlaylists.length} playlists from Spotify');
+
+      _isLoadingPlaylist = false;
+      notifyListeners();
+      loadAllPlaylistTracksInBackground();
+    } catch (e) {
+      print('❌ ERROR in refreshUserPlaylists: $e');
+      _playlistErrorMessage = 'Failed to refresh playlists: $e';
+      _isLoadingPlaylist = false;
+      notifyListeners();
+    }
+  }
 Future<void> loadAllPlaylistTracksInBackground() async 
 {
     if (_isLoadingPlaylistTracks) return;

@@ -270,7 +270,26 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
           child: AnimatedOpacity(
             opacity: _detailState == LibraryDetailState.none ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 400),
-            child: _buildMainLibraryView(context),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                // Refresh both playlists and albums data
+                final spotifyProvider = context.read<SpotifyDataProvider>();
+                await spotifyProvider.refreshUserPlaylists();
+
+                // Show success feedback
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Playlists aktualisiert'),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.green.withOpacity(0.9),
+                  ),
+                );
+              },
+              color: Colors.white,
+              backgroundColor: Colors.black.withOpacity(0.5),
+              child: _buildMainLibraryView(context),
+            ),
           ),
         ),
 
@@ -285,112 +304,133 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
     final topPadding = MediaQuery.of(context).padding.top + 80;
     final bottomPadding = MediaQuery.of(context).padding.bottom + 90;
     final horizontalPadding = size.width * 0.05;
-    
-    return CustomScrollView(
-      controller: widget.scrollController,
-      slivers: [
-        // Sektion 1: "Meine Sammlung" Überschrift
-        SliverPadding(
-          padding: EdgeInsets.only(
-            top: topPadding,
-            left: horizontalPadding,
-            right: horizontalPadding,
-            bottom: 16,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: Text(
-              'Meine Sammlung',
-              style: GoogleFonts.manrope(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+
+    // NEU: RefreshIndicator um CustomScrollView
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Rufe die neue Funktion im Provider auf
+        await context.read<SpotifyDataProvider>().refreshUserPlaylists();
+      },
+      backgroundColor: Colors.black.withOpacity(0.5),
+      color: Colors.white,
+      child: CustomScrollView( // Bestehende CustomScrollView
+        controller: widget.scrollController,
+        slivers: [
+          // Sektion 1: "Meine Sammlung" Überschrift
+          SliverPadding(
+            padding: EdgeInsets.only(
+              top: topPadding,
+              left: horizontalPadding,
+              right: horizontalPadding,
+              bottom: 16,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'Meine Sammlung',
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
-        ),
 
-        // Sektion 2: Horizontales Karussell
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 165,
-            child: ValueListenableBuilder<Box<PersonalAlbum>>(
-              valueListenable: libraryService.getAlbumsListenable(),
-              builder: (context, box, _) {
-                final albums = box.values.toList();
-                final likedCount = context.watch<SpotifyDataProvider>().likedTracks.length;
+          // Sektion 2: Horizontales Karussell
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 165,
+              child: ValueListenableBuilder<Box<PersonalAlbum>>(
+                valueListenable: libraryService.getAlbumsListenable(),
+                builder: (context, box, _) {
+                  final albums = box.values.toList();
+                  final likedCount = context.watch<SpotifyDataProvider>().likedTracks.length;
 
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.only(left: horizontalPadding),
-                  itemCount: albums.length + 2, // +2 für Liked & Create
-                  itemBuilder: (context, index) {
-                    // Item 1: Liked Songs
-                    if (index == 0) {
-                      return CompactCollectionCard(
-                        title: "Liked Songs",
-                        subtitle: "$likedCount Tracks",
-                        type: CompactCardType.liked,
-                        onTap: () => _openDetailView(LibraryDetailState.likedSongs, "likedSongs"),
-                        heroTag: 'hero-liked-songs',
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.only(left: horizontalPadding),
+                    itemCount: albums.length + 2, // +2 für Liked & Create
+                    itemBuilder: (context, index) {
+                      // Item 1: Liked Songs
+                      if (index == 0) {
+                        return CompactCollectionCard(
+                          title: "Liked Songs",
+                          subtitle: "$likedCount Tracks",
+                          type: CompactCardType.liked,
+                          onTap: () => _openDetailView(LibraryDetailState.likedSongs, "likedSongs"),
+                          heroTag: 'hero-liked-songs',
+                        );
+                      }
+                      // Item 2: Create Album
+                      if (index == 1) {
+                        return CompactCollectionCard(
+                          title: "Erstellen",
+                          subtitle: "Neues Album",
+                          type: CompactCardType.create,
+                          onTap: () => _createAlbumDialog(context),
+                          heroTag: 'hero-create-album',
+                        );
+                      }
+                      // Rest: Eigene Alben
+                      final album = albums[index - 2];
+                      return GestureDetector(
+                        onLongPress: () => _showAlbumSyncOptions(context, album),
+                        child: Stack(
+                          children: [
+                            CompactCollectionCard(
+                              title: album.name,
+                              subtitle: "${album.trackIds.length} Tracks",
+                              imageUrl: album.coverImageUrl,
+                              type: CompactCardType.album,
+                              onTap: () => _openDetailView(LibraryDetailState.localAlbum, album),
+                              heroTag: 'hero-album-${album.key}',
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: _buildSyncIndicator(album),
+                            ),
+                          ],
+                        ),
                       );
-                    }
-                    // Item 2: Create Album
-                    if (index == 1) {
-                      return CompactCollectionCard(
-                        title: "Erstellen",
-                        subtitle: "Neues Album",
-                        type: CompactCardType.create,
-                        onTap: () => _createAlbumDialog(context),
-                        heroTag: 'hero-create-album',
-                      );
-                    }
-                    // Rest: Eigene Alben
-                    final album = albums[index - 2];
-                    return CompactCollectionCard(
-                      title: album.name,
-                      subtitle: "${album.trackIds.length} Tracks",
-                      imageUrl: album.coverImageUrl,
-                      type: CompactCardType.album,
-                      onTap: () => _openDetailView(LibraryDetailState.localAlbum, album),
-                      heroTag: 'hero-album-${album.key}',
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-        
-        // Sektion 3: "Spotify Playlists" Überschrift
-        SliverPadding(
-          padding: EdgeInsets.only(
-            top: 32, // Mehr Abstand
-            left: horizontalPadding,
-            right: horizontalPadding,
-            bottom: 16,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: Text(
-              'Spotify Playlists',
-              style: GoogleFonts.manrope(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                    },
+                  );
+                },
               ),
             ),
           ),
-        ),
 
-        // Sektion 4: Vertikale Playlist (wie vorher, aber als Sliver)
-        SliverPadding(
-          padding: EdgeInsets.only(
-            left: horizontalPadding,
-            right: horizontalPadding,
-            bottom: bottomPadding,
+          // Sektion 3: "Spotify Playlists" Überschrift
+          SliverPadding(
+            padding: EdgeInsets.only(
+              top: 32, // Mehr Abstand
+              left: horizontalPadding,
+              right: horizontalPadding,
+              bottom: 16,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'Spotify Playlists',
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
-          sliver: _buildPlaylistList(), // Diese Methode bleibt gleich
-        ),
-      ],
+
+          // Sektion 4: Vertikale Playlist (wie vorher, aber als Sliver)
+          SliverPadding(
+            padding: EdgeInsets.only(
+              left: horizontalPadding,
+              right: horizontalPadding,
+              bottom: bottomPadding,
+            ),
+            sliver: _buildPlaylistList(), // Diese Methode bleibt gleich
+          ),
+        ],
+      ),
     );
   }
 
@@ -856,14 +896,18 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
                                         icon: Icons.playlist_add,
                                         title: playlist.name,
                                         subtitle: '${playlist.trackCount} Tracks',
-                                        onTap: () async {
-                                          // Add to Spotify playlist
+                                      onTap: () async {
                                           final playlistService = context.read<PlaylistService>();
+                                          // Provider VOR dem try-catch holen
+                                          final provider = context.read<SpotifyDataProvider>();
+
                                           try {
                                             await playlistService.addTracksToPlaylist(
                                               playlist.id,
                                               ['spotify:track:${track.id}'],
                                             );
+
+                                            // Erfolg
                                             if (context.mounted) {
                                               Navigator.of(context).pop();
                                               ScaffoldMessenger.of(context).showSnackBar(
@@ -875,16 +919,26 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
                                               );
                                             }
                                           } catch (e) {
-                                            if (context.mounted) {
-                                              Navigator.of(context).pop();
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text('Error: Could not add track'),
-                                                  behavior: SnackBarBehavior.floating,
-                                                  backgroundColor: Colors.red.withOpacity(0.9),
-                                                ),
-                                              );
+                                            // Fehlerbehandlung
+                                            if (!context.mounted) return;
+                                            Navigator.of(context).pop(); // Modal schließen
+
+                                            String errorMessage = 'Error: Could not add track';
+
+                                            // Prüfen, ob es der 404-Fehler war
+                                            if (e.toString().contains('404')) {
+                                              errorMessage = 'Error: Playlist "${playlist.name}" wurde auf Spotify nicht gefunden. Sie wird aktualisiert.';
+                                              // "Tote" Playlist aus der UI entfernen, indem wir ein Refresh erzwingen
+                                              provider.refreshUserPlaylists();
                                             }
+
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(errorMessage),
+                                                behavior: SnackBarBehavior.floating,
+                                                backgroundColor: Colors.red.withOpacity(0.9),
+                                              ),
+                                            );
                                           }
                                         },
                                       );
@@ -904,6 +958,316 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
           ),
         );
       },
+    );
+  }
+
+  void _showAlbumSyncOptions(BuildContext context, PersonalAlbum album) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withOpacity(0.15),
+                      Colors.white.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border(
+                    top: BorderSide(color: Colors.white.withOpacity(0.3), width: 2),
+                    left: BorderSide(color: Colors.white.withOpacity(0.3), width: 2),
+                    right: BorderSide(color: Colors.white.withOpacity(0.3), width: 2),
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Sync Optionen für "${album.name}"',
+                              style: GoogleFonts.manrope(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Divider(color: Colors.white.withOpacity(0.1), height: 1),
+
+                      // Options
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Column(
+                          children: [
+                            if (!album.syncEnabled)
+                              _buildSyncOptionTile(
+                                icon: Icons.cloud_upload,
+                                title: 'Spotify Sync aktivieren',
+                                subtitle: 'Erstelle eine Spotify-Playlist für dieses Album',
+                                color: Colors.greenAccent,
+                                onTap: () async {
+                                  await libraryService.enableSpotifySync(album.key.toString());
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Sync für "${album.name}" aktiviert'),
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.green.withOpacity(0.9),
+                                      ),
+                                    );
+                                  }
+                                },
+                              )
+                            else ...[
+                              _buildSyncOptionTile(
+                                icon: Icons.sync,
+                                title: 'Jetzt synchronisieren',
+                                subtitle: album.needsSync
+                                    ? 'Synchronisiere lokale Änderungen mit Spotify'
+                                    : 'Playlist ist bereits synchronisiert',
+                                color: album.needsSync ? Colors.orangeAccent : Colors.greenAccent,
+                                enabled: album.needsSync,
+                                onTap: album.needsSync ? () async {
+                                  try {
+                                    await libraryService.syncAlbumToSpotify(album.key.toString());
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Album "${album.name}" synchronisiert'),
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.green.withOpacity(0.9),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Sync fehlgeschlagen: $e'),
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.red.withOpacity(0.9),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                } : null,
+                              ),
+
+                              _buildSyncOptionTile(
+                                icon: Icons.cloud_off,
+                                title: 'Sync deaktivieren',
+                                subtitle: 'Trenne die Verbindung zur Spotify-Playlist',
+                                color: Colors.redAccent,
+                                onTap: () async {
+                                  await libraryService.disableSpotifySync(album.key.toString());
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Sync für "${album.name}" deaktiviert'),
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.blue.withOpacity(0.9),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+
+                              if (album.spotifyPlaylistId != null)
+                                _buildSyncOptionTile(
+                                  icon: Icons.open_in_new,
+                                  title: 'In Spotify öffnen',
+                                  subtitle: 'Playlist in der Spotify-App öffnen',
+                                  color: Colors.green,
+                                  onTap: () {
+                                    // TODO: Implement opening playlist in Spotify
+                                    Navigator.of(context).pop();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Spotify-Integration wird implementiert'),
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.blue.withOpacity(0.9),
+                                      ),
+                                    );
+                                  },
+                                ),
+                            ],
+
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(vertical: 16),
+                                    ),
+                                    child: Text(
+                                      'Abbrechen',
+                                      style: GoogleFonts.manrope(
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSyncIndicator(PersonalAlbum album) {
+    if (!album.syncEnabled) {
+      return SizedBox.shrink();
+    }
+
+    Color indicatorColor;
+    IconData indicatorIcon;
+
+    if (album.needsSync) {
+      // Needs sync - orange/yellow
+      indicatorColor = Colors.orangeAccent;
+      indicatorIcon = Icons.cloud_upload;
+    } else if (album.spotifyPlaylistId != null) {
+      // Synced - green
+      indicatorColor = Colors.greenAccent;
+      indicatorIcon = Icons.cloud_done;
+    } else {
+      // Sync enabled but no playlist yet - gray
+      indicatorColor = Colors.grey;
+      indicatorIcon = Icons.cloud_off;
+    }
+
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.6),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Icon(
+        indicatorIcon,
+        color: indicatorColor,
+        size: 14,
+      ),
+    );
+  }
+
+  Widget _buildSyncOptionTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required Color color,
+    bool enabled = true,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Opacity(
+          opacity: enabled ? 1.0 : 0.5,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: color.withOpacity(0.1),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.manrope(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                if (enabled)
+                  Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.3), size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

@@ -39,8 +39,7 @@ class LiquidNavBar extends StatelessWidget {
                   children: [
                     _buildNavItem(Icons.swipe_rounded, "Swipe", 0),
                     _buildNavItem(Icons.library_music_rounded, "Library", 1),
-                    _buildNavItem(Icons.favorite_border_rounded, "Likes", 2),
-                    _buildNavItem(Icons.settings_outlined, "Settings", 3),
+                    _buildNavItem(Icons.settings_outlined, "Settings", 2),
                   ],
                 ),
               ),
@@ -51,7 +50,7 @@ class LiquidNavBar extends StatelessWidget {
     );
   }
 
-  /// Baut ein einzelnes Navigations-Element 
+  /// Baut ein einzelnes Navigations-Element
   Widget _buildNavItem(IconData icon, String label, int index) {
     final bool isSelected = selectedIndex == index;
     return GestureDetector(

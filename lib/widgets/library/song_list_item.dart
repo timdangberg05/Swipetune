@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -64,7 +65,7 @@ class SongListItem extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        _buildIndexBox(),
+                        _buildTrackImage(),
                         SizedBox(width: imageSpacing),
                         Expanded(
                           child: _buildTrackInfo(),
@@ -93,6 +94,24 @@ class SongListItem extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildTrackImage() {
+    return track.albumImageUrl.isNotEmpty
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: CachedNetworkImage(
+              imageUrl: track.albumImageUrl,
+              width: 42,
+              height: 42,
+              fit: BoxFit.cover,
+              memCacheWidth: 84,
+              memCacheHeight: 84,
+              placeholder: (_, __) => _buildPlaceholder(),
+              errorWidget: (_, __, ___) => _buildIndexBox(),
+            ),
+          )
+        : _buildIndexBox();
   }
 
   Widget _buildIndexBox() {
@@ -131,6 +150,14 @@ class SongListItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 42,
+      height: 42,
+      color: const Color(0x1AFFFFFF),
     );
   }
 

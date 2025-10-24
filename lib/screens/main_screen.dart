@@ -112,7 +112,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     }
      // Navbar beim Seitenwechsel immer anzeigen (außer evtl. bei Settings)
      // Wenn die Seite NICHT Settings ist, zeige die Navbar sofort an
-     if (page != 3) {
+     if (page != 2) {
         _showNavBar();
      } else {
        // Wenn es Settings ist, setze den Fortschritt basierend auf dem aktuellen Scroll-Offset zurück
@@ -122,7 +122,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   void _onNavProgressChanged() {
     // Nur aktualisieren, wenn die aktuelle Seite Settings ist
-    if (widget.currentPageNotifier.value == 3) {
+    if (widget.currentPageNotifier.value == 2) {
       _navBarController.value = navBarProgressNotifier.value;
     }
   }
@@ -208,9 +208,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           // Scroll-Listener für Navbar in Settings
           NotificationListener<ScrollNotification>(
             onNotification: (ScrollNotification notification) {
-              // Nur auf ScrollUpdates auf der Settings-Seite (Index 3) reagieren
+              // Nur auf ScrollUpdates auf der Settings-Seite (Index 2) reagieren
               if (notification is ScrollUpdateNotification &&
-                  widget.currentPageNotifier.value == 3 &&
+                  widget.currentPageNotifier.value == 2 &&
                   notification.metrics.axis == Axis.vertical) {
 
                 final offset = notification.metrics.pixels;
@@ -232,7 +232,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 navBarProgressNotifier.value = _navBarController.value;
               }
                // Falls der User ganz nach oben scrollt in Settings
-               else if (notification is ScrollEndNotification && widget.currentPageNotifier.value == 3 && notification.metrics.pixels <= 10) {
+               else if (notification is ScrollEndNotification && widget.currentPageNotifier.value == 2 && notification.metrics.pixels <= 10) {
                  _showNavBar();
                  navBarProgressNotifier.value = 0.0;
                }
@@ -241,7 +241,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: _onPageSwiped,
-              itemCount: 4, // Anzahl der Seiten
+              itemCount: 3, // Anzahl der Seiten
               itemBuilder: (context, index) {
                 switch (index) {
                   case 0:
@@ -249,14 +249,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   case 1:
                     // LibraryScreen erhält den ScrollController
                     return LibraryScreen(
-                      scrollController: _scrollController, 
+                      scrollController: _scrollController,
                       libraryMorphController: _libraryMorphController,
                       isDetailViewNotifier: isLibraryDetailVisible, // <-- NEU
                     );
                   case 2:
-                    // TODO: Likes Page implementieren
-                    return const Center(child: Text("Likes Page", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)));
-                  case 3:
                     // SettingsScreen erhält den ScrollController und den Navbar-Notifier
                     return SettingsScreen(scrollController: _scrollController, navBarProgress: navBarProgressNotifier);
                   default:
