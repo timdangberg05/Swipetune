@@ -482,9 +482,17 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   }
 
   Widget _buildSettingsTab(Size screenSize) {
-    return Column(
+  return SingleChildScrollView(
+    padding: EdgeInsets.only(
+      bottom: screenSize.height * 0.12, // Abstand unterhalb gegen Überlappung
+      left: 20,
+      right: 20,
+      top: 10,
+    ),
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- PROFILE SECTION ---
         Text(
           'Profile',
           style: GoogleFonts.manrope(
@@ -504,7 +512,10 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
           title: 'Change Avatar',
           subtitle: 'Update your picture',
         ),
+
         SizedBox(height: screenSize.height * 0.03),
+
+        // --- NOTIFICATIONS SECTION ---
         Text(
           'Notifications',
           style: GoogleFonts.manrope(
@@ -527,7 +538,10 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
           hasToggle: true,
           toggleValue: true,
         ),
+
         SizedBox(height: screenSize.height * 0.03),
+
+        // --- ACCOUNT SECTION ---
         Text(
           'Account',
           style: GoogleFonts.manrope(
@@ -542,11 +556,13 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
           title: 'Log Out',
           subtitle: 'You will be returned to login',
           isDestructive: true,
-          onTap: _handleLogout, 
+          onTap: _handleLogout,
         ),
       ],
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildSectionHeader(String title, {String? subtitle, VoidCallback? onViewAll}) {
     return Row(
@@ -579,22 +595,22 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
           GestureDetector(
             onTap: onViewAll,
             child: Row(
-              children: [
-                Text(
-                  'View All',
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1DB954),
-                  ),
-                ),
-                const SizedBox(width: 4),
-              const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14.0,
-                  color: Color(0xFF1DB954),
-                ),
-              ],
+              // children: [
+              //   Text(
+              //     'View All',
+              //     style: GoogleFonts.manrope(
+              //       fontSize: 13,
+              //       fontWeight: FontWeight.w600,
+              //       color: const Color(0xFF1DB954),
+              //     ),
+              //   ),
+              //   const SizedBox(width: 4),
+              // const Icon(
+              //     Icons.arrow_forward_ios_rounded,
+              //     size: 14.0,
+              //     color: Color(0xFF1DB954),
+              //   ),
+              // ],
             ),
           ),
       ],
@@ -1249,160 +1265,134 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   }
 
   Widget _buildUltraModernSwipeCard({
-    required bool isLike,
-    required FirebaseTrack track,
-    required Size screenSize,
-  }) {
-    // Simulate a timestamp - in real app, you'd have actual timestamps
-    final timeAgo = track.name.length % 2 == 0 ? 'Just now' : '2h ago';
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SongDetailPage(track: track)),
-      ),
-      child: Container(
-        width: screenSize.width * 0.38,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              spreadRadius: 3,
-              offset: const Offset(0, 10),
-            ),
+  required bool isLike,
+  required FirebaseTrack track,
+  required Size screenSize,
+}) {
+  final gradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: isLike
+        ? [
+            const Color(0xFF1DB954).withOpacity(0.15),
+            const Color(0xFF2D9CDB).withOpacity(0.10),
+            Colors.white.withOpacity(0.06),
+          ]
+        : [
+            const Color(0xFFFF5A5A).withOpacity(0.15),
+            const Color(0xFFC73666).withOpacity(0.10),
+            Colors.white.withOpacity(0.06),
           ],
+  );
+
+  return GestureDetector(
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SongDetailPage(track: track)),
+    ),
+    child: Container(
+  width: screenSize.width * 0.38,
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(18),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.15),
+        blurRadius: 12,
+        spreadRadius: 2,
+        offset: const Offset(0, 6),
+      ),
+    ],
+  ),
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(18),
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+      child: Container(
+        decoration: BoxDecoration(
+
+              
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.25),
+            width: 1.5,
+          ),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isLike ? const Color(0xFF1DB954).withOpacity(0.3) :
-                         Colors.white.withOpacity(0.15),
-                  width: 2,
-                ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Cover
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.network(
+                track.albumImageUrl ?? '',
+                height: screenSize.height * 0.14,
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
+            ),
+
+            // Textbereich
+            Padding(
+              padding: EdgeInsets.all(screenSize.width * 0.025),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Status Badge with haptic feedback simulation
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenSize.width * 0.035,
-                      vertical: screenSize.height * 0.01,
+                  Text(
+                    track.name,
+                    style: GoogleFonts.manrope(
+                      fontSize: screenSize.width * 0.037,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1.15,
                     ),
-                    decoration: BoxDecoration(
-                      color: isLike ?
-                        const Color(0xFF1DB954).withOpacity(0.15) :
-                        const Color(0xFFFF5A5A).withOpacity(0.15),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(22),
-                        topRight: Radius.circular(22),
-                      ),
-                    ),
-                    child: Text(
-                      isLike ? '💚 LIKED' : '💔 DISLIKED',
-                      style: GoogleFonts.manrope(
-                        fontSize: screenSize.width * 0.032,
-                        fontWeight: FontWeight.w800,
-                        color: isLike ?
-                          const Color(0xFF1DB954) :
-                          const Color(0xFFFF5A5A),
-                      ),
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  // Song Content
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.all(screenSize.width * 0.035),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Song Name
-                          Text(
-                            track.name,
-                            style: GoogleFonts.manrope(
-                              fontSize: screenSize.width * 0.042,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              height: 1.1,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: screenSize.height * 0.008),
-                          // Artist Name
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.account_circle,
-                                size: screenSize.width * 0.035,
-                                color: Colors.white.withOpacity(0.6),
-                              ),
-                              SizedBox(width: screenSize.width * 0.015),
-                              Expanded(
-                                child: Text(
-                                  track.artist,
-                                  style: GoogleFonts.manrope(
-                                    fontSize: screenSize.width * 0.035,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white.withOpacity(0.7),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: screenSize.height * 0.012),
-                          // Time & Heart Icon
-                          Row(
-                            children: [
-                              Text(
-                                timeAgo,
-                                style: GoogleFonts.manrope(
-                                  fontSize: screenSize.width * 0.03,
-                                  color: Colors.white.withOpacity(0.55),
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: EdgeInsets.all(screenSize.width * 0.015),
-                                decoration: BoxDecoration(
-                                  color: isLike ?
-                                    const Color(0xFF1DB954).withOpacity(0.2) :
-                                    const Color(0xFFFF5A5A).withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  isLike ? Icons.favorite : Icons.heart_broken,
-                                  color: isLike ?
-                                    const Color(0xFF1DB954) :
-                                    const Color(0xFFFF5A5A),
-                                  size: screenSize.width * 0.045,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  SizedBox(height: screenSize.height * 0.004),
+                  Text(
+                    track.artist,
+                    style: GoogleFonts.manrope(
+                      fontSize: screenSize.width * 0.032,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: screenSize.height * 0.006),
+                  Row(
+                    children: [
+                      // Text(
+                      //   //track.dateAdded ?? "Just now",
+                      //   style: GoogleFonts.manrope(
+                      //     fontSize: screenSize.width * 0.027,
+                      //     color: Colors.white54,
+                      //   ),
+                      // ),
+                      const Spacer(),
+                      Icon(
+                        isLike ? Icons.favorite_rounded : Icons.heart_broken_rounded,
+                        color: isLike
+                            ? const Color(0xFF1DB954)
+                            : const Color(0xFFFF5A5A),
+                        size: screenSize.width * 0.045,
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  ),
+),
+
+  );
+}
+
 
   String _getMockSongName(int index) {
     List<String> songs = [
